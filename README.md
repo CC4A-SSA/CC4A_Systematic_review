@@ -12,16 +12,6 @@ full text download, an extraction that quotes the paper rather than
 paraphrasing it, a mapping onto controlled vocabularies, and an Excel export
 carrying its own quality score.
 
-Everything is R. Nothing in a script decides anything analytical: the
-practices, the units, the search terms and the scope window are all read from
-files at run time, so widening the review is an edit to a table rather than a
-rewrite.
-
-A word on why the design is cautious. These numbers end up multiplied by
-hectares and by years inside a financial model, where nobody will be able to
-see which paper a figure came from. A plausible looking wrong number is
-therefore the expensive failure, and most of what follows is arranged to make
-that failure noisy rather than silent.
 
 Contact: Namita Joshi, Alliance Bioversity International and CIAT
 (n.joshi@cgiar.org).
