@@ -1,0 +1,233 @@
+table,stream,field,core_for_pilots,type,required,allowed_values_or_unit,description,lands_in
+source,all,source_id,yes,id,R,SRC-0001,Unique id,governance.sources
+source,all,citation,yes,string,R,,Full citation,governance.sources
+source,all,doi_or_url,,string,C,,"DOI, or stable URL for grey literature. Required where one exists",governance.sources
+source,all,doc_type,yes,enum,R,peer_reviewed|grey_report|project_evaluation|thesis|dataset|carbon_project_document|meta_analysis|review,Document type,confidence metadata (tier)
+source,all,file_path,yes,string,R,,"Path of the stored PDF or file in the project folder, so a verifier opens the same version",verification
+source,all,era_study_code,,string,O,,ERA code if the study is already in ERA — avoids re-extracting what ERA holds,governance.sources
+source,all,streams,,enum-multi,R,1|2|3|4,Streams this source feeds,screening log
+source,all,screened_by,,string,R,,"Who screened it in (person, and AI tool if used)",screening log
+source,all,note,,string,O,,Free text. The home for anything interesting that lands in no target object,none
+study,1,study_id,yes,id,R,STU-0001,Unique id,all child tables
+study,1,source_id,yes,id,R,,Parent source,governance.sources
+study,1,trial_id,yes,id,R,TRL-0001,"One id per physical trial or evaluation, shared by companion papers and by the ERA record of the same trial. De-duplicate and count independence on this, not on source or DOI",independence unit for pooling and tier (n independent trials)
+study,1,practice_id,yes,enum,R,awd|biochar|rotational_grazing|ca_bundle|cover_crops|nutrient_mgmt_b|trees_in_farmlands|fodder_banks|feed_mgmt|silvopasture|dsr|sri|erw,"Practice, per 01-practice-definitions",identity.practice_id
+study,1,subtype,,string,C,,Sub-pathway tag where the definition requires one (parkland|alley; deferred; moderate|severe AWD),identity.subtype
+study,1,era_codes,yes,string,R,b28; h10,era-aom leaf codes for treatment and control; 'none' plus nearest code where no leaf exists,identity.era_codes
+study,1,management,yes,enum,R,on_station|on_farm_researcher_managed|on_farm_farmer_managed|farmer_practice_observed|modelled,Who managed the practice. Pooling stratum and tier downgrade (researcher-managed effects typically exceed farmer-managed),tier; production.strata
+study,1,design,yes,enum,R,experiment_on_station|experiment_on_farm_researcher|experiment_on_farm_farmer|rct|quasi_experimental|panel|survey_single_round|modelled|project_evaluation|observational,Study design,confidence metadata (tier)
+study,1,country,yes,string,R,ISO3; several separated by ;,Countries,production.strata; uncertainty.analogue_domain
+study,1,n_sites,,integer,R,,Number of distinct sites,tier; cross-check of site_season rows (site-season counts in the recipe come from classified site_season rows)
+study,1,n_seasons,,integer,R,,Number of cropping seasons (or grazing years) observed,tier; cross-check of site_season rows (site-season counts in the recipe come from classified site_season rows)
+study,1,n_site_seasons,yes,integer,R,,Site × season combinations actually observed (not sites × years if some are missing),tier; indicator.site_seasons_observed where site_season rows are not reported
+study,1,plot_or_area,,string,R,m2 or ha; herd size; 'not reported',"Plot size, study area or herd size. Write 'not reported' rather than leaving it empty",confidence metadata
+study,1,comparator,yes,string,R,,"What the effect was measured against, in words (for example 'continuous flooding, same variety and N')",production.comparator; adaptation.comparator
+study,1,comparator_era_code,,string,R,h48,"era-aom control code, or 'none'",identity.era_codes
+study,1,contrast_type,yes,enum,R,isolated|defined_bundle|partial_bundle|confounded,See 01 §1.2,tier; pooling rule
+study,1,bundle_components,,string,C,,Every component of the treatment where contrast_type is not isolated,governance.evidence_summary
+study,1,dose,yes,string,R,,"Dose or intensity as implemented, using the descriptors listed for the practice in 01 (rate, threshold, stocking rate, density, age…)",production.moderators; uncertainty
+study,1,dose_farm_feasible,,enum,R,yes|no|unclear,"Could smallholders apply this dose with locally available resources (feedstock, labour, seedlings, water control)? State the basis in note. Infeasible doses are kept but stratified",production.strata; tier
+study,1,meets_methodology_definition,,enum,R,yes|no|unclear,Does the practice as implemented meet the carbon methodology's practice definition (01 §5)?,identity.methodology_alignment; strata
+study,1,rob_assignment,yes,enum,R,low|some|high|unclear,Risk of bias: how treatment was assigned (randomised plots / matched / self-selected),tier (risk-of-bias downgrade)
+study,1,rob_confounding,,enum,R,low|some|high|unclear,"Baseline differences between arms (soil, site history, farmer characteristics)",tier
+study,1,rob_comparator_fidelity,,enum,R,low|some|high|unclear,"Was the comparator what it claims (same fertiliser, same variety, same management)?",tier
+study,1,rob_outcome_measurement,,enum,R,low|some|high|unclear,"Measured (harvested, weighed) vs recalled or estimated outcome",tier
+study,1,rob_selective_reporting,yes,enum,R,low|some|high|unclear,"Are some seasons, sites or arms reported and others dropped? Season-level results shown only for 'interesting' years count as high",tier
+study,1,mean_farm_size_ha,,number,O,ha,"Mean farm size of participants, where reported",per-household translation (zone statistics)
+study,1,area_under_practice_per_hh_ha,,number,O,ha,Area under the practice per participating household,per-household translation
+study,1,years_since_establishment,yes,number,C,years,"Years since the practice started at the observation. Required for CA, trees, biochar, rotational grazing",temporal.ramp_up
+study,1,water_regime,yes,enum,R,rainfed|irrigated_full|irrigated_supplemental|mixed,Water regime,production.strata
+study,1,water_control_level,,enum,C,field|block|scheme|none,"Irrigated rice only: who controls water timing. In many SSA schemes the scheme sets rotations, not the farmer",AWD/DSR/SRI routing and strata
+study,1,residue_cover_at_planting,,string,C,% cover or t/ha,CA and cover crops only: residue cover MEASURED at planting (not intended). Post-harvest grazing often removes it,CA bundle test; production.moderators
+study,1,stocking_rate_equal,,enum,C,yes|no|unstated,"Rotational grazing, silvopasture: were stocking rates equal across arms? If not, per-head gains are confounded",tier; buffering eligibility
+study,1,herd_mobility,,enum,C,sedentary|seasonal_mobility|highly_mobile|unstated,Livestock on communal land: mobility confounds herd outcomes,strata; tier
+study,1,enforcement_note,,string,C,,"Communal grazing reserves: how rest is enforced (by-law, committee, customary)",governance.evidence_summary
+study,1,finding_direction,yes,enum,R,positive|null|negative|mixed,"Overall direction for the practice on the primary outcome. Null and negative are recorded, never dropped",governance.evidence_summary
+study,1,risk_channel_evidence,,string,C,,"Only if the study reports a behavioural response to reduced risk (more fertiliser, credit, higher-value crops, more area). Otherwise leave empty — the practice-level g_risk determination is made once, in the recipe",indicator.g_risk
+study,1,adoption_logged,,boolean,O,,Tick if the source also reports adoption or extent; add a row to adoption_obs,adoption table
+site_season,"1, 2",site_season_id,yes,id,R,SS-0001,Unique id,effect.site_season_id
+site_season,"1, 2",study_id,yes,id,R,,Parent study,
+site_season,"1, 2",site_name,,string,R,,As reported,verification
+site_season,"1, 2",lat,yes,number,R,decimal degrees,Latitude,season classification → indicator.hazard_benchmark
+site_season,"1, 2",lon,yes,number,R,decimal degrees,Longitude,season classification
+site_season,"1, 2",coord_source,yes,enum,R,reported|geocoded_place|admin_centroid,"How the coordinates were obtained. Geocoded values are recorded as such, never passed off as reported",classification confidence
+site_season,"1, 2",season_label,,string,R,for example 2019 long rains,Season as reported,season classification
+site_season,"1, 2",year,yes,integer,R,,Year of harvest,season classification
+site_season,"1, 2",planting_date,yes,date,C,YYYY-MM-DD or YYYY-MM,"Planting or sowing date, or start of grazing season. Required where reported; otherwise leave empty and S5 uses the crop calendar",season classification
+site_season,"1, 2",harvest_date,yes,date,C,YYYY-MM-DD or YYYY-MM,Harvest date or end of season,season classification
+site_season,"1, 2",author_condition,yes,enum,R,normal|stress|unknown,Season condition as the authors describe it (not our classification),cross-check of classification
+site_season,"1, 2",author_condition_basis,,string,C,,What the authors base it on (for example 'rainfall 310 mm vs 620 mm long-term mean'). Required if author_condition = stress,cross-check
+site_season,"1, 2",seasonal_rainfall_mm,,number,O,mm,If reported,cross-check
+site_season,"1, 2",irrigation_supply_note,,string,C,,"Irrigated rice (AWD, DSR, SRI) only: water supply or scheme allocation in the season as reported (for example 'canal closed six weeks', 'supply 60% of demand')",water-supply deficit classification (S5)
+site_season,"1, 2",soil_ph,,number,O,,Reported site soil pH. Where not reported S5 attaches it from lat/lon (SoilGrids or the base-layer stack),production.moderators; routing.depends_on.drivers; production.effect.stratum
+site_season,"1, 2",soil_organic_carbon_pct,,number,O,%,Reported SOC. Same rule,production.moderators; routing drivers
+site_season,"1, 2",texture_or_clay_pct,,string,O,texture class or % clay,Reported texture. Same rule,production.moderators; routing drivers
+site_season,"1, 2",aez_reported,,string,O,,Agro-ecological zone as the authors state it. S5 assigns our stratum,production.effect.stratum (cross-check)
+site_season,"1, 2",classified_hazard,,enum,O,drought|heat|waterlogging|flood|water_supply,"FILLED BY S5, not by extraction",adaptation.buffering[hazard]
+site_season,"1, 2",classified_severity,,enum,O,normal|moderate|severe|extreme,"FILLED BY S5 — against the fixed Atlas thresholds, or for water_supply against the deficit classes in the hazard specification (F3)",adaptation.buffering[hazard][severity]
+site_season,"1, 2",classified_compound,,string,O,none | e.g. drought+heat,FILLED BY S5: other hazards exceeding a threshold in the same season. Compound seasons are excluded from single-hazard coefficients unless the estimator models them,per-hazard estimation; no cross-hazard double counting
+site_season,"1, 2",hazard_index_value,,number,O,,"FILLED BY S5: the continuous index value (for example NDWS days), kept so class-boundary sensitivity can be tested",sensitivity of b to ±1 class
+effect,1,effect_id,yes,id,R,EFF-0001,Unique id,
+effect,1,study_id,yes,id,R,,Parent study,
+effect,1,site_season_id,yes,id,C,,Required when the effect is reported per site-season. Empty for pooled effects,buffering (via classification)
+effect,1,treatment_arm,yes,string,R,,Treatment arm label exactly as in the source (for example 'BC10+NPK'),verification (wrong_arm check); pooling
+effect,1,control_arm,yes,string,R,,Control arm label exactly as in the source (for example 'NPK'),verification; production.comparator
+effect,1,dose,,string,C,,Required when this arm's dose differs from study.dose (multi-rate trials),production.moderators
+effect,1,aggregation,yes,enum,R,site_season|pooled_seasons|pooled_sites|pooled_all|meta_analytic,Level at which the effect is reported,tier; production.basis
+effect,1,reported_condition,yes,enum,R,normal|stress|pooled|unknown,"Season condition the effect refers to, as reported",production (normal) vs buffering (stress)
+effect,1,outcome,yes,enum,R,crop_yield|biomass_yield|milk_yield|weight_gain|meat_yield|animal_mortality|animal_survival|body_condition|herd_size_change|forage_biomass|water_use|soil_moisture|other,era-aom outcome label (Productivity → Product Yield; Resilience → Animal Survival; Efficiency → Water Use; Soil Quality → Soil Moisture),production.effect / adaptation.buffering for yield and livestock outcomes; soil_moisture → mechanism evidence; water_use → AWD/DSR/SRI water-demand ratio
+effect,1,commodity,yes,string,R,MapSPAM crop or livestock species,Crop or species,identity.commodities; loss matrix key
+effect,1,unit,yes,string,R,t/ha; kg/head/day; g/head/day; % mortality; kg DM/ha,Unit as reported,production.unit
+effect,1,treatment_mean,yes,number,C,,Required unless only a relative effect is reported,g computation
+effect,1,control_mean,yes,number,C,,Required unless only a relative effect is reported,g computation; loss matrix (silver) from control arm
+effect,1,n_treatment,yes,integer,C,,Replicates or sample size in the treatment arm. Required where reported — used for replication-based weights when variance is missing,pooling weights; uncertainty
+effect,1,n_control,yes,integer,C,,Same for the control arm,pooling weights
+effect,1,shared_control_group,,string,C,,"Label shared by effect rows that use the same control (multi-rate trials), so the control is not counted several times",independence handling
+effect,1,dispersion_type,,enum,O,sd|se|ci95|cv|lsd|none,Type of variance statistic,uncertainty.distributions
+effect,1,dispersion_value,,number,O,,Value,uncertainty.distributions
+effect,1,relative_effect,,number,C,"fraction, e.g. 0.12 = +12%",Only where means are not reported. Record which metric in relative_effect_type,production.effect
+effect,1,relative_effect_type,,enum,C,pct_change|log_response_ratio|ratio|difference,Metric of relative_effect,
+effect,1,extraction_method,,enum,R,text|table|figure_digitised|computed,How the number was obtained. Figure-digitised and computed values carry extra verification,verification
+mechanism,1,mechanism_id,,id,R,MEC-0001,Unique id,
+mechanism,1,study_id,,id,R,,Parent study,
+mechanism,1,hazard,,enum,R,drought|heat|waterlogging|flood|water_supply,Hazard,adaptation.hazards
+mechanism,1,pathway,,string,R,,Causal pathway in one sentence (for example 'higher plant-available water in the 0–30 cm layer extends crop water supply during dry spells'),adaptation.mechanism[hazard]
+mechanism,1,mechanism_variable,,string,O,,"Measured intermediate (soil moisture, canopy temperature, THI under shade…)",adaptation.mechanism evidence
+mechanism,1,support,,enum,R,measured|authors_inferred|hypothesised,Whether the pathway was measured in this study or asserted,confidence
+mechanism,1,stress_season_difference,,enum,R,yes|no|not_tested,Did the mechanism variable differ between arms IN STRESS SEASONS? A difference in normal seasons only does not support an adaptation mechanism,adaptation.mechanism (support rule)
+mechanism,1,direction,,enum,R,supports|null|contradicts,"Whether the evidence supports the mechanism. 'supports' requires stress_season_difference = yes and support = measured, or authors' analysis linking it to the yield difference",adaptation.mechanism
+cost,1,cost_id,yes,id,R,CST-0001,Unique id,cost table
+cost,1,source_id,yes,id,R,,Parent source. Cost-only grey reports need no study row,governance.sources
+cost,1,study_id,,id,C,,"Parent study, where the cost comes from a study already extracted",
+cost,1,country,,string,R,ISO3,Country the figure applies to (Chun sets defaults per practice × country),cost table
+cost,1,admin1,,string,O,,Subnational unit if stated,cost table
+cost,1,practice_id,yes,enum,R,(as study),Practice,cost table
+cost,1,cost_class,yes,enum,R,establishment_fixed|variable_running|replacement|maintenance|project_setup|aggregation_extension|mrv_monitoring|validation_verification|registry_issuance|farmer_payment,"Farm level: establishment_fixed, variable_running, replacement, maintenance (era-aom Fixed/Variable Cost). Project level (carbon-project documents): project_setup … farmer_payment. Farm-level rows are the priority; project-level rows are captured when met, not searched for separately",cost table
+cost,1,item,yes,string,R,,"What the figure covers (for example 'biochar production, kiln and labour')",cost table
+cost,1,value,yes,number,R,,As reported,cost table
+cost,1,unit_basis,yes,enum,R,per_ha|per_ha_per_season|per_ha_per_year|per_head|per_farm|per_project|per_tonne_input,Denominator,cost table
+cost,1,currency,yes,string,R,ISO 4217,As reported. Not converted,cost table (Chun converts)
+cost,1,price_year,yes,integer,R,,"Year of the prices. If unstated, record publication year and set price_year_basis",cost table
+cost,1,price_year_basis,,enum,R,stated|assumed_publication_year|assumed_data_year,,cost table
+cost,1,labour_included,yes,enum,R,yes|no|unstated,Is labour in the figure?,cost table boundary
+cost,1,labour_days,,number,C,person-days per unit_basis,Required if reported,cost table
+cost,1,labour_rate,,string,C,"value, currency, basis","Rate used and its basis (market wage, opportunity cost, minimum wage)",cost table boundary
+cost,1,family_labour_costed,yes,enum,R,yes|no|unstated,Is family labour valued?,cost table boundary
+cost,1,inputs_included,,enum,R,yes|no|unstated,Materials and inputs,cost table boundary
+cost,1,transport_included,,enum,R,yes|no|unstated,,cost table boundary
+cost,1,equipment_included,,enum,R,purchase|hire|depreciated|no|unstated,How equipment enters,cost table boundary
+cost,1,training_included,,enum,R,yes|no|unstated,Training or extension,cost table boundary
+cost,1,certification_mrv_included,,enum,R,yes|no|unstated,"Certification, MRV, carbon-project costs",cost table boundary
+cost,1,opportunity_cost_included,,enum,R,yes|no|unstated,"Land, residue or feedstock opportunity cost",cost table boundary
+cost,1,in_kind_items,,string,O,,"Inputs provided free or subsidised (seedlings, cuttings, kilns, herbicide) and by whom",cost table boundary
+cost,1,subsidy_share,,number,O,fraction,Share of the cost covered by a programme or project,cost table (Chun)
+cost,1,cost_basis_source,yes,enum,R,trial_record|farmer_recall|project_budget|project_monitoring_report|pdd_estimate|expert_estimate,"Where the figure comes from — budgets and PDD estimates are plans, not outturns",cost table (confidence)
+cost,1,labour_months,,string,O,,"When the labour falls (for example 'Feb–Mar, before planting') — peak-season labour matters more than totals",cost table; Chun
+cost,1,labour_by_sex,,string,O,,"Who does the labour, where reported (for example weeding shifts to women under CA)",cost table; gender reporting
+cost,1,n_farmers_covered,,integer,C,,Required for per_project and per_farm figures so they can be normalised,cost table
+cost,1,area_ha_covered,,number,C,ha,Required for per_project figures,cost table
+cost,1,project_year,,integer,C,,"Year of the project or practice the cost falls in (1 = establishment). Required where reported, so costs over a crediting period can be profiled",cost table; temporal profile
+cost,1,crediting_period_years,,number,O,,For carbon-project documents,cost table
+cost,1,stocking_rate_tlu_ha,,number,C,TLU/ha,"Rotational grazing cost rows: stocking rate and grazing area, so costs convert to per ha",cost table
+cost,1,cost_bearer,,enum,R,farmer|programme|project_developer|mixed|unstated,Who pays,cost table (Chun decides what enters NEB)
+cost,1,boundary_quote_id,yes,id,R,,"Quote id for the sentence or table note that states what the figure includes. If none exists, record 'none' — that itself is the finding",verification
+characteristic,1,char_id,,id,R,CHR-0001,Unique id,
+characteristic,1,source_id,,id,R,,Parent source,governance.sources
+characteristic,1,study_id,,id,C,,"Parent study, where one exists",
+characteristic,1,characteristic,,enum,R,longevity_years|replacement_cycle_years|mortality_replanting_pct|time_to_production_benefit_years|time_to_adaptation_benefit_years|years_to_steady_state|persistence_after_cessation|persistence_after_payments_end|reversal_risk,Which characteristic. Time to benefit is recorded separately for production and adaptation. Disadoption goes in adoption_obs,temporal.*
+characteristic,1,value,,number,C,,Numeric value where one is given,temporal.*
+characteristic,1,unit,,string,C,,,temporal.*
+characteristic,1,description,,string,C,,Where the finding is qualitative (for example reversal risk from tillage reversion),temporal.reversal_risk; indicator.reversal_risk_flag
+loss_obs,3,loss_id,,id,R,LOS-0001,Unique id,loss matrix sources
+loss_obs,3,source_id,,id,R,,Parent source,
+loss_obs,3,system,,enum,R,crop|livestock,,loss matrix key
+loss_obs,3,commodity,,string,R,MapSPAM crop; cattle|sheep|goats|camels; dairy|beef,,loss matrix key
+loss_obs,3,livestock_metric,,enum,C,milk|liveweight|mortality|forage_dm,Required for livestock,loss matrix key (livestock block)
+loss_obs,3,hazard,,enum,R,drought|heat|waterlogging|flood|water_supply,water_supply for irrigated rice under supply deficit,loss matrix key
+loss_obs,3,hazard_index,,string,R,"for example SPI-3, NDWS days, NTx35 days, THI, flood duration days, % of normal rainfall",The index the loss is linked to,severity mapping
+loss_obs,3,hazard_index_value,,number,C,,Value of that index in the event or treatment,severity mapping
+loss_obs,3,severity_reported,,string,O,,Severity as the source describes it,cross-check
+loss_obs,3,severity_mapped,,enum,O,moderate|severe|extreme,Mapped to our classes by Pete/S5 against the Atlas thresholds — not by extraction,loss matrix key
+loss_obs,3,location,,string,R,country; admin1; lat/lon if given,,loss matrix strata
+loss_obs,3,year,,string,R,,Year or season,cross-check with hazard stack
+loss_obs,3,loss_value,,number,R,fraction (0.35 = 35% loss),Production lost,loss matrix value
+loss_obs,3,loss_reference,,enum,R,vs_normal_season|vs_long_term_mean|vs_trend|vs_potential|vs_non_stressed_control,What the loss is measured against. Must be stated — see open question Q4,loss matrix definition
+loss_obs,3,method,,enum,R,event_report|managed_stress_trial|field_trial_control_arm|statistical_yield_weather|crop_model|expert_elicitation|insurance_record,How the loss was established,loss matrix tier (bronze/silver/gold)
+loss_obs,3,attribution_note,,string,O,,"Confounders (conflict, prices, pests) the source mentions",confidence
+loss_obs,3,derived_from_effect_id,,id,C,,"Required when method = field_trial_control_arm. Such rows form a separate stratum, are never pooled with event reports, and are never used to validate the b they came from",loss matrix stratum; independence
+adoption_obs,4,adoption_id,,id,R,ADO-0001,Unique id,adoption table
+adoption_obs,4,source_id,,id,R,,Parent source,
+adoption_obs,4,practice_id,,enum,R,(as study),,adoption table
+adoption_obs,4,definition_used,,string,R,,"The source's definition of adoption, verbatim or close",adoption table
+adoption_obs,4,definition_match,,enum,R,exact|broader|narrower|different,Against our definition in 01. Survey 'minimum tillage' often means something else,adoption table (usability)
+adoption_obs,4,methodology_match,,enum,R,yes|no|unclear,Against the carbon methodology's practice-change definition (01 §5),adoption table (additionality screen)
+adoption_obs,4,context,,enum,R,pre_project_baseline|within_project|non_project|national_general,"Whether the figure describes a baseline, a project population or the general population. Baseline adoption bears on additionality",adoption table; Activity 4
+adoption_obs,4,reporter,,enum,R,independent_survey|implementer_self_report|remote_sensing|registry,Implementer self-reports tend to count trainees as adopters,adoption table (confidence)
+adoption_obs,4,ever_vs_current,,enum,R,current|ever|unstated,Current use vs ever tried,adoption table
+adoption_obs,4,intensity,,string,O,,Share of plots or area under the practice among adopters; components used (partial adoption of bundles),adoption table
+adoption_obs,4,geography_level,,enum,R,national|admin1|admin2|project|site,,adoption table
+adoption_obs,4,geography,,string,R,ISO3; admin names,,adoption table
+adoption_obs,4,year,,integer,R,,Reference year of the data,adoption table; Activity 4 scenario B/C
+adoption_obs,4,measure,,enum,R,share_households|share_area|area_ha|number_farmers|number_animals,,adoption table
+adoption_obs,4,value,,number,R,,,adoption table
+adoption_obs,4,denominator,,string,C,,Denominator for shares (all farm households; rice growers…),adoption table
+adoption_obs,4,value_women,,number,O,,Where sex-disaggregated (holder or manager — record which in note),adoption table (grant requires women and men)
+adoption_obs,4,value_men,,number,O,,,adoption table
+adoption_obs,4,data_source_type,,enum,R,national_survey|lsms_isa_panel|agricultural_census|project_records|remote_sensing|carbon_registry|expert_estimate,,adoption table (confidence)
+adoption_obs,4,sample_size,,integer,O,,,adoption table (confidence)
+adoption_obs,4,representative,,enum,R,national|subnational|project_only|unknown,,adoption table (confidence)
+adoption_obs,4,disadoption,,number,C,fraction,Required where reported,adoption table; temporal.reversal_risk
+adoption_obs,4,disadoption_period_years,,number,C,years,Period over which disadoption is measured. Required with disadoption,adoption table
+adoption_obs,4,disadoption_reason,,string,O,,"Stated reasons (end of subsidy, labour, tenure…)",temporal.reversal_risk
+dataset,2,dataset_id,,id,R,DAT-0001,Unique id,register
+dataset,2,name,,string,R,,,register
+dataset,2,custodian,,string,R,,Institution and programme,register
+dataset,2,contact,,string,C,,Named person to ask,register
+dataset,2,practices,,string,R,practice_ids,Practices represented,register
+dataset,2,commodities,,string,R,,,register
+dataset,2,countries,,string,R,,,register
+dataset,2,years_span,,string,R,YYYY–YYYY,,register
+dataset,2,n_sites,,integer,C,,,register
+dataset,2,has_coordinates,,enum,R,yes|no|unstated,,usability
+dataset,2,has_dates,,enum,R,yes|no|unstated,"Planting and harvest dates, or enough to use a crop calendar",usability
+dataset,2,has_control,,enum,R,yes|no|unstated,A without-practice comparator,usability
+dataset,2,season_classified,,enum,R,yes|no|unstated,Whether seasons are already labelled stress/normal,usability
+dataset,2,expected_stress_site_seasons,,string,O,,Rough estimate once S5 has screened coordinates and years,priority
+dataset,2,access,,enum,R,open|on_request|restricted|unknown,,cost to obtain
+dataset,2,licence,,string,C,,,Global Access compliance
+dataset,2,effort_obtain_days,,number,R,,Estimate,priority
+dataset,2,effort_use_days,,number,R,,"Estimate (cleaning, harmonising)",priority
+dataset,2,could_yield,,string,R,,Which recipe or loss-matrix fields it could populate,priority
+dataset,2,priority,,enum,R,high|medium|low,See 03 §2.4 scoring,register
+quote,all,quote_id,yes,id,R,QTE-00001,Unique id,verification
+quote,all,source_id,yes,id,R,,,verification
+quote,all,record_ref,yes,string,R,"table.record_id.field, e.g. effect.EFF-0012.treatment_mean; several separated by ;",The extracted value(s) this quote supports,verification
+quote,all,quote_basis,yes,enum,R,verbatim|era_record|dataset_row,verbatim for documents. era_record: values imported from ERA carry the ERA record id as locator and no verbatim text; 20% of ERA-imported trials are checked against the paper (04 §2). dataset_row: row id in an obtained dataset,verification
+quote,all,verbatim,yes,string,C,,"Required when quote_basis = verbatim. Exact text, copied not retyped. For tables: row label, column header and cell. One quote row may cover a block of a table (list the rows and columns in locator) and support several record_refs",verification check A
+quote,all,locator_type,,enum,R,page|table|figure|section|supplement|dataset_row,,verification
+quote,all,locator,yes,string,R,"for example 'p. 7, Table 3, row ""B20"", column ""2019 LR""'",Enough for someone else to find it without searching,verification
+quote,all,claim,yes,string,R,,"The claim the extraction attaches to this quote, in one sentence. This is what check B tests",verification check B
+quote,all,computation,,string,C,,Formula and input quote ids where the value is computed,verification
+quote,all,extractor,,string,R,,"Person, plus AI tool and version if used",audit
+quote,all,extraction_date,,date,R,,,audit
+verification,all,verification_id,yes,id,R,VER-00001,Unique id,audit
+verification,all,quote_id,yes,id,C,,"Required except for an omitted arm or season, which has no quote",
+verification,all,record_ref,,string,C,table.record_id or study_id,Required when quote_id is empty (omitted arm or season),
+verification,all,verifier,,string,R,,Person or independent AI session (with tool/version),audit
+verification,all,date,,date,R,,,audit
+verification,all,check_a_exists,yes,enum,R,exact|minor_difference|not_found|locator_wrong,Does the quoted text exist as quoted at the locator?,audit
+verification,all,check_b_supports,yes,enum,R,supports|partially|does_not_support|contradicts,Does the quote support the claim attached to it?,audit
+verification,all,blind_value,,string,C,,"Verifier's own reading of the value, taken before seeing the extracted value (sampled fields — see 04)",audit
+verification,all,value_match,,enum,C,match|within_tolerance|mismatch,,audit
+verification,all,failure_mode,yes,enum,C,fabricated_quote|misattributed_quote|wrong_number|wrong_unit|wrong_arm|wrong_season|pooled_as_stress|context_stripped|omitted_arm_season|other,Required when any check fails,audit metrics
+verification,all,resolution,,enum,C,extractor_corrected|record_withdrawn|disputed_to_adjudicator|no_action_needed,,audit
+verification,all,resolved_by,,string,C,,Adjudicator (E1 or Pete); never the original extractor alone,audit
+verification,all,planted_error,,boolean,O,,"True if this record carried a deliberately planted error (verifier sensitivity test, 04 §4)",audit metrics (verifier catch rate)
+verification,all,note,,string,O,,,
+gap,"1, 3",gap_id,yes,id,R,GAP-0001,Unique id,route D statements; evidence-gap map
+gap,"1, 3",practice_or_system,yes,string,R,,,governance.gaps
+gap,"1, 3",hazard,yes,enum,C,drought|heat|waterlogging|flood|water_supply|n/a,,governance.gaps
+gap,"1, 3",reason,yes,enum,R,no_mechanism|mechanism_contradicted|no_stress_seasons|no_season_data|no_ssa_evidence|pooled_only|below_entry_conditions|no_evidence|compound_only,Why no value,reason codes → null reason codes in layers
+gap,"1, 3",studies_screened,,integer,R,,How many studies were looked at before concluding this,governance.gaps
+gap,"1, 3",adverse_signal,yes,enum,R,none|negative_b|negative_delta_s|sign_inconsistent,Whether the sub-threshold evidence points the wrong way. Anything other than none is carried to the recipe's adverse_signals and shown on the published layer,adaptation.adverse_signals; published layer
+gap,"1, 3",fix,,string,O,,What would close it (for example 'classify seasons in DAT-0004'),research-prioritisation output

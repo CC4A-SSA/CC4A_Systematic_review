@@ -1,0 +1,163 @@
+# =====================================================================
+#  ILLUSTRATIVE RECIPE — ALL NUMBERS AND SOURCES ARE INVENTED
+#  Template for the layout only. Do not cite, do not run.
+#  Worked through in 06-worked-example-biochar.md
+#  Block structure follows Annex B of the Activity 2 work plan (v0.1 sketch);
+#  final field names are set when the schema freezes in mid-October.
+# =====================================================================
+
+illustrative: true
+
+identity:
+  practice_id: biochar
+  name: Biochar application to cropland
+  era_codes: [b28]
+  comparator_era_codes: [h10]           # same fertiliser regime, no biochar
+  crosswalk_row: "Increased Soil Carbon in Croplands / Biochar — Go"
+  alliance_tab_row: 9
+  tnc_pathway: Increased Soil Carbon in Croplands
+  system_type: crop
+  commodities: [maize]                  # extended as evidence for other crops is verified
+  production_system_masks: [rainfed_cropland]
+  methodology_alignment:
+    family: "Verra biochar methodology (VM0044) / Puro.earth — confirm versions"
+    evidence_meets_definition: unclear   # pit-kiln char; credited biochar needs controlled pyrolysis specs
+
+routing:
+  route: B                              # driver-determined
+  justification: >
+    Response varies with mappable soil drivers (pH, SOC, texture) that are named in the
+    evidence; field trials with season-level data are too sparse and clustered to transfer
+    by analogue (route C). A published maize response product exists in the project
+    Literature folder and is checked for reuse before any surface is built.
+  depends_on:
+    drivers: [soil_ph, soil_organic_carbon, clay_fraction]
+    reuse_candidates:
+      - ref: "Kern 2025 — Biochar Maize Yield Impact Global (tif in Literature/Biochar)"
+        status: to_assess                # provenance, licence, vintage, fit to 5 arcmin
+
+adaptation:
+  hazards: [drought]
+  mechanism:
+    drought:
+      pathway: >
+        Higher plant-available water in the topsoil extends crop water supply through
+        dry spells.
+      support: measured                  # in SRC-ILL-01 (soil moisture measured)
+      sources: [SRC-ILL-01]
+    heat: {status: no_mechanism, gap_ref: GAP-ILL-02}
+    waterlogging: {status: not_assessed, gap_ref: GAP-ILL-03}
+    flood: {status: no_mechanism, gap_ref: GAP-ILL-04}
+  comparator: "Same field and fertiliser regime, no biochar"
+  buffering:                            # fraction of the loss avoided; signed; per hazard x severity
+    drought:
+      moderate:
+        central: 0.25
+        low: 0.05                        # trial-level bootstrap, 10th percentile
+        high: 0.45                       # 90th percentile
+        no_buffering_reference: -0.10    # = -p (02 §3.2)
+        buffering_rel: 0.077             # lnRR_stress - lnRR_normal
+        n_trials: 1
+        site_seasons: 12
+        stress_site_seasons: 3
+        distinct_stress_events: 2
+        tier: 1
+        tier_basis: "Entry conditions met; one trial -> base Tier 2; downgrade: no farmer-managed evidence -> Tier 1"
+        sources: [SRC-ILL-01]
+      severe:
+        central: null                   # observed -0.13 in one event only; below entry conditions
+        reason_code: below_entry_conditions
+        note: "Single event: b = -0.13 vs reference -0.10; confounded with year 3 of the char; not in the engine"
+        gap_ref: GAP-ILL-05
+      extreme:
+        central: null
+        reason_code: no_stress_seasons
+        gap_ref: GAP-ILL-06
+  adverse_signals:                      # shown on the published layer (05 §2.5)
+    - {hazard: drought, severity: severe, signal: negative_b, gap_ref: GAP-ILL-05,
+       text: "One trial suggests the advantage shrinks under severe drought (confounded with char age)"}
+  g_risk:
+    value: 0
+    reason: >
+      Mechanism test: the gain would exist in a climate with no shocks? No behavioural
+      response to reduced risk is claimed or measured. Risk-response gains attach to
+      insurance, weather-indexed credit and advisory services, not to a soil amendment.
+
+production:
+  comparator: "Same field and fertiliser regime, no biochar"
+  effect:
+    - stratum: {system: rainfed_maize, aez: humid_subhumid_highland, soil_ph: "<5.5"}
+      central: 0.10                     # proportional yield change, normal season
+      low: 0.02
+      high: 0.18
+      unit: proportion_of_control_yield
+      basis: normal_season
+      n_trials: 1
+      management: on_farm_researcher_managed
+      dose: "2 t/ha, pit kiln (farm-feasible)"
+      tier: 1
+      tier_basis: "One trial within stratum -> base Tier 2; downgrade: no farmer-managed evidence -> Tier 1"
+      sources: [SRC-ILL-01]
+  moderators:
+    - {name: soil_ph, direction: "larger effect at lower pH", status: hypothesised, source: SRC-ILL-02}   # <10 trials: no meta-regression
+    - {name: application_rate_t_ha, direction: "larger at higher rates; farm-feasible range low single digits", status: hypothesised, source: SRC-ILL-02}
+    - {name: years_since_application, direction: "declines after year 3", source: SRC-ILL-01}
+  reused_products: []
+
+temporal:
+  bcg_archetype: soil_amendment_one_off
+  time_to_benefit_years: {production: 1, adaptation: 1}
+  ramp_up_shape: immediate_then_decline
+  years_to_steady_state: null
+  longevity_years: {central: 5, low: 3, high: 10, tier: 1, sources: [SRC-ILL-02]}
+  replacement_cycle_years: null         # re-application practice not evidenced
+  persistence: "Carbon persists; yield effect declines — see moderators"
+  reversal_risk: {value: low, basis: "carbon stable; yield effect declines rather than reverses", source: SRC-ILL-02}
+  benefit_by_years_since_application:    # bins for crediting-period cash-flow alignment
+    "0-2": {production: 0.10}
+    "3-5": {production: null, note: "declining; one trial"}
+
+economics:
+  price_basis_ref: F5_interface_spec    # Chun and S2; not set here
+  cost_refs: [CST-ILL-01, CST-ILL-02]   # rows in the shared cost table; Chun sets defaults (with tier)
+
+uncertainty:
+  distributions:
+    buffering.drought.moderate: {family: to_be_set_by_S5, low: 0.05, high: 0.45}
+    production.effect[0]: {family: to_be_set_by_S5, low: 0.02, high: 0.18}
+  correlation_partners: [production.effect, buffering.drought.moderate]
+  analogue_domain: {proven: [humid_subhumid_highland], extrapolated: [], unknown: [semi_arid, arid]}
+
+indicator:                              # interoperability with the CGIAR adaptation indicator
+  value_domain: kg_per_ha_per_year
+  hazard_benchmark:
+    drought: "NDWS days, fixed Atlas thresholds: moderate 15, severe 20, extreme 25"
+  climate_reference: Adaptation Atlas hazard stack (S5)
+  measurement_window_W: 1
+  # Observed in the SOURCE stratum (02 §3). Not what the engine applies: per pixel the
+  # engine recomputes the increment as L(local) x b x baseline and merges with Equation 2.
+  g_norm_kg_ha: 300
+  g_stress_kg_ha:
+    drought: {moderate: 450, severe: null, extreme: null}
+  observed_increment_kg_ha:             # g(h,s) - g_norm
+    drought: {moderate: 150, severe: null, extreme: null}
+  partial_severity_flag: true           # only moderate populated; serve AF with P restricted to populated classes
+  aggregation_rule: "Equation 2 — AF_h = sum_s P(h,s)(g(h,s)-g_norm) / sum_s P(h,s); computed per pixel by the engine"
+  evidence_tier: 1
+  site_seasons_observed: 12
+  stress_site_seasons_observed: 5         # 3 moderate + 2 severe; 3 enter the moderate coefficient
+  reversal_risk_flag: false
+
+governance:
+  evidence_summary: >
+    ILLUSTRATIVE. One researcher-managed on-farm trial (Tier 1) supports moderate-drought
+    buffering in acidic highland soils at a farm-feasible dose. Severe-drought evidence is a
+    single event, points to a shrinking advantage, and is confounded with char age.
+    No evidence for extreme drought, heat or flood. Technical potential, not a creditable claim.
+  confidence_label: Low               # 05 §3; shown with evidence counts
+  gaps: [GAP-ILL-02, GAP-ILL-03, GAP-ILL-04, GAP-ILL-05, GAP-ILL-06]
+  verification: {quotes_checked: 41, failures: 1, failure_modes: {wrong_arm: 1}, batch: VB-ILL-01}
+  author: E1
+  reviewer: null                        # task A7 — a named reviewer who did not write this
+  review_date: null
+  version: 0.0-illustrative
