@@ -106,4 +106,4 @@ The fixes add steps (protocol registration, screening QC, risk of bias, estimato
 
 - **Severity classes stay the primitive; fixed thresholds stay.** Both are work-plan decisions checked against the indicator (`02-method.md`). The reviews asked for validation of the classes, which is added; not for their replacement.
 - **Enablers stay out** (decision D3) until Pete answers Q1.
-- **The synthesis still does not compute NEB or source prices.** Several carbon-finance points are for Chun's analysis; the synthesis now captures what he needs.
+- **The synthesis still does not compute NEB or source prices.** Several carbon-finance points are for Chun's analysis; the synthesis now captures what she needs.

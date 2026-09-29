@@ -20,6 +20,7 @@ CC4A_ROOT <- rprojroot::find_root(rprojroot::has_file("CC4A.Rproj"))
 DIR_R          <- file.path(CC4A_ROOT, "R")
 DIR_CATALOGUES <- file.path(CC4A_ROOT, "catalogues")
 DIR_DOCS       <- file.path(CC4A_ROOT, "docs")
+DIR_SYNTHESIS  <- file.path(DIR_DOCS, "synthesis")
 
 # Everything the pipeline produces. Git ignored and safe to delete, because
 # the scripts regenerate it. Redirect it with CC4A_OUT_DIR if you want runs
@@ -85,6 +86,12 @@ FILE_VOCAB_PRACTICES <- file.path(DIR_CATALOGUES, "vocab_practices.csv")
 FILE_VOCAB_UNITS     <- file.path(DIR_CATALOGUES, "vocab_units.csv")
 FILE_KEYWORDS        <- file.path(DIR_CATALOGUES, "keyword_list.R")
 
+# The extraction schema, the one definition of every table and field, and
+# the Excel template built from it by R/00_shared/build_template.R. Both are
+# part of the protocol, so they live in docs/synthesis/ rather than here.
+FILE_SCHEMA   <- file.path(DIR_SYNTHESIS, "extraction_schema.csv")
+FILE_TEMPLATE <- file.path(DIR_SYNTHESIS, "extraction_template.xlsx")
+
 # The hand checked gold set used to score the pipeline in step 7.
 FILE_GOLD_SET <- file.path(DIR_CATALOGUES, "gold_set.csv")
 
@@ -92,8 +99,10 @@ FILE_GOLD_SET <- file.path(DIR_CATALOGUES, "gold_set.csv")
 
 # Publication window applied by R/03_screen/screen_rules.R. Widening the
 # review is a two number change here, followed by a rerun of the rules. No
-# record is screened again by a model.
-YEAR_MIN <- 2000
+# record is screened again by a model. The protocol admits 1990 onwards, and
+# long term trials of any date (docs/synthesis/03, section 1.4), so the
+# screening rules exempt stream 2 records from YEAR_MIN.
+YEAR_MIN <- 1990
 YEAR_MAX <- 2026
 
 # Africa. Used to filter the OpenAlex result set in step 1 and checked again

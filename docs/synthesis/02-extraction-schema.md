@@ -16,6 +16,8 @@ source ─┬─ study ─┬─ site_season ──┐
         │         └─ characteristic   → recipe temporal block
         ├─ loss_obs                   → loss matrix (Stream 3)
         ├─ adoption_obs               → adoption and extent table (Stream 4)
+        ├─ adoption_driver            → adoption driver table (Stream 4; Chun, 10)
+        ├─ benefit_share              → benefit sharing table (Streams 1, 4; Chun, 10)
         └─ quote ── verification      (every extracted value; see 04)
 dataset                               → Stream 2 register
 gap                                   → route D statements, evidence-gap map
@@ -295,7 +297,7 @@ Shared with Chun Song. One row per cost item. A figure with no boundary statemen
 | `country` |  | string | R | ISO3 | Country the figure applies to (Chun sets defaults per practice × country) | cost table |
 | `admin1` |  | string | O |  | Subnational unit if stated | cost table |
 | `practice_id` | ● | enum | R | (as study) | Practice | cost table |
-| `cost_class` | ● | enum | R | establishment_fixed \| variable_running \| replacement \| maintenance \| project_setup \| aggregation_extension \| mrv_monitoring \| validation_verification \| registry_issuance \| farmer_payment | Farm level: establishment_fixed, variable_running, replacement, maintenance (era-aom Fixed/Variable Cost). Project level (carbon-project documents): project_setup … farmer_payment. Farm-level rows are the priority; project-level rows are captured when met, not searched for separately | cost table |
+| `cost_class` | ● | enum | R | establishment_fixed \| variable_running \| replacement \| maintenance \| total \| project_setup \| aggregation_extension \| mrv_monitoring \| validation_verification \| registry_issuance \| farmer_payment | Farm level: establishment_fixed, variable_running, replacement, maintenance (era-aom Fixed/Variable Cost), and total for a reported total cost (`10` §3.4: alongside its components, never instead of them; set `author_computed`). Project level (carbon-project documents): project_setup … farmer_payment. Farm-level rows are the priority; project-level rows are captured when met, not searched for separately | cost table |
 | `item` | ● | string | R |  | What the figure covers (for example 'biochar production, kiln and labour') | cost table |
 | `value` | ● | number | R |  | As reported | cost table |
 | `unit_basis` | ● | enum | R | per_ha \| per_ha_per_season \| per_ha_per_year \| per_head \| per_farm \| per_project \| per_tonne_input | Denominator | cost table |
@@ -323,6 +325,9 @@ Shared with Chun Song. One row per cost item. A figure with no boundary statemen
 | `crediting_period_years` |  | number | O |  | For carbon-project documents | cost table |
 | `stocking_rate_tlu_ha` |  | number | C | TLU/ha | Rotational grazing cost rows: stocking rate and grazing area, so costs convert to per ha | cost table |
 | `cost_bearer` |  | enum | R | farmer \| programme \| project_developer \| mixed \| unstated | Who pays | cost table (Chun decides what enters NEB) |
+| `author_computed` |  | enum | R | yes \| no | yes when the figure is the authors' own aggregate (a total, an annualised or discounted cost) rather than an itemised cost. Kept and flagged; Chun decides whether it is used (`10` §3.4) | cost table (confidence) |
+| `discount_rate` |  | number | C | fraction | Required when the figure is discounted | cost table (Chun) |
+| `horizon_years` |  | number | C | years | Planning horizon. Required when the figure is discounted or annualised | cost table (Chun) |
 | `boundary_quote_id` | ● | id | R |  | Quote id for the sentence or table note that states what the figure includes. If none exists, record 'none' — that itself is the finding | verification |
 
 ### `characteristic` — stream 1
@@ -393,6 +398,44 @@ Stream 4 — adoption and current extent. One row per practice × geography × y
 | `disadoption` |  | number | C | fraction | Required where reported | adoption table; temporal.reversal_risk |
 | `disadoption_period_years` |  | number | C | years | Period over which disadoption is measured. Required with disadoption | adoption table |
 | `disadoption_reason` |  | string | O |  | Stated reasons (end of subsidy, labour, tenure…) | temporal.reversal_risk |
+
+### `adoption_driver` — stream 4
+
+Added for Chun's analysis (`10` §3.2, §3.3). What makes farmers adopt, including payment experiments and choice experiments. One row per driver per model. Null and non-significant drivers are extracted too.
+
+| Field | Core | Type | Req | Allowed / unit | Description | Lands in |
+|---|---|---|---|---|---|---|
+| `driver_id` |  | id | R | ADR-0001 | Unique id | adoption driver table |
+| `source_id` |  | id | R |  | Parent source | governance.sources |
+| `practice_id` |  | enum | R | (as study) | Practice | adoption driver table |
+| `country` |  | string | R | ISO3 |  | adoption driver table |
+| `driver` |  | string | R |  | The factor, in the source's terms (credit access, tenure, extension contact, payment level) | adoption driver table |
+| `driver_class` |  | enum | R | finance \| tenure \| information_extension \| payment_incentive \| labour \| market \| household \| other | For grouping across studies. Payment experiments and choice experiments use payment_incentive | adoption driver table |
+| `stated_preference` |  | enum | R | yes \| no | yes for choice experiments and willingness-to-accept studies; no for observed behaviour, including randomised payment experiments. Never pooled | adoption driver table (confidence) |
+| `effect_value` |  | number | R |  | As reported | adoption driver table |
+| `effect_unit` |  | enum | R | percentage_points \| odds_ratio \| marginal_effect \| elasticity \| payment_level \| other | payment_level for a payment needed to induce participation; currency and basis in the quote | adoption driver table |
+| `model` |  | string | R |  | Estimation model (probit, logit, double hurdle, RCT difference, conditional logit) | adoption driver table (confidence) |
+| `significant` |  | enum | R | yes \| no \| unstated | At the level the source reports | adoption driver table |
+| `sample_size` |  | integer | O |  |  | adoption driver table (confidence) |
+| `quote_id` |  | id | R |  | Verbatim support | verification |
+
+### `benefit_share` — streams 1, 4
+
+Added for Chun's analysis (`10` §3.1). The share of carbon income that reaches farmers. Extracted when a document already opened for costs or adoption reports it, mostly carbon-project documents and their evaluations; no separate search.
+
+| Field | Core | Type | Req | Allowed / unit | Description | Lands in |
+|---|---|---|---|---|---|---|
+| `benefit_share_id` |  | id | R | BSH-0001 | Unique id | benefit sharing table |
+| `source_id` |  | id | R |  | Parent source | governance.sources |
+| `practice_id` |  | enum | R | (as study) | Practice | benefit sharing table |
+| `project_name` |  | string | O |  | Carbon project, where named | benefit sharing table |
+| `country` |  | string | R | ISO3 |  | benefit sharing table |
+| `share_value` |  | number | R | fraction | Share of carbon income that reaches farmers | benefit sharing table |
+| `share_basis` |  | enum | R | gross_credit_revenue \| net_of_project_costs \| per_credit_fixed \| unstated | What the share is a share of | benefit sharing table |
+| `payment_form` |  | enum | R | cash \| in_kind \| mixed \| unstated | How farmers receive it | benefit sharing table |
+| `reporter` |  | enum | R | project_developer \| independent_evaluation \| registry \| academic_study | Who reports it. Developer figures are claims rather than outturns | benefit sharing table (confidence) |
+| `year` |  | integer | R |  | Reference year | benefit sharing table |
+| `quote_id` |  | id | R |  | Verbatim support | verification |
 
 ### `dataset` — stream 2
 
