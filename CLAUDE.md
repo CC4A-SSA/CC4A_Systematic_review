@@ -33,7 +33,7 @@ rather than writing code; read it before touching extraction or verification
 prompts.
 
 The pipeline is being moved from its first scope (costs and adoption only)
-to the protocol in phases, listed in `README.md` §9. Where the code or the
+to the protocol in phases, listed in `README.md` §10. Where the code or the
 catalogues still reflect the first scope, the protocol is the target: do not
 extend the old design.
 
@@ -134,13 +134,19 @@ produces nothing is the worse kind of lie.
 
 Short version. The walkthrough is `.claude/skills/add-practice/SKILL.md`.
 
-1. Add a row to `catalogues/vocab_practices.csv`: `practice_code` in
-   snake_case, `label`, one sentence `definition`, semicolon separated
-   `synonyms` covering every spelling the literature uses, `carbon_relevant`,
-   and a `notes` field that says what the practice is not.
-2. Add a group of the same name to `KW_PRACTICE` in
-   `catalogues/keyword_list.R`.
-3. Rerun step 1, then steps 2 to 5 for the new records only (they are
+1. Define the practice in `docs/synthesis/01-practice-definitions.md`. That
+   is the protocol; the catalogue follows it, never the other way round.
+2. Add a row to `catalogues/vocab_practices.csv`: `practice_code` in
+   snake_case, `scope`, `crosswalk`, `era_codes`, `definition`, `comparator`,
+   semicolon separated `synonyms` covering every spelling the literature
+   uses, and a `notes` field that says what the practice is not and where a
+   borderline paper goes.
+3. Add the code to the `practice_id` list in
+   `docs/synthesis/extraction_schema.csv` and rebuild the template with
+   `Rscript R/00_shared/build_template.R`.
+4. Add an entry of the same name to `KW_PRACTICE` in
+   `catalogues/keyword_list.R`, and the same string to `03` §1.3.
+5. Rerun step 1, then steps 2 to 5 for the new records only (they are
    resumable), then step 6 in full, then step 7.
 
 Step 6 is rerun in full because the option list changed. Decisions taken
@@ -153,17 +159,21 @@ the coding goes wrong.
 
 ## 6. Extending the keyword list
 
-`catalogues/keyword_list.R` holds four blocks: the practices, and the cost,
-adoption and carbon outcome terms. The search crosses a practice group with
-an outcome block.
+`catalogues/keyword_list.R` holds the protocol's strings
+(`docs/synthesis/03-search-strategy.md`) as blocks, and `KW_SEARCHES` says
+which blocks each search crosses. Change a string in `03` first, then here,
+so the two match.
 
 - Terms are matched against title and abstract.
 - Prefer a term that promises a number (`cost per hectare`, `adoption rate`)
   over one that promises a topic (`farming`, `sustainability`).
 - Include hyphenated, abbreviated and non-hyphenated forms. `no-till`,
   `no till` and `zero tillage` are three terms.
-- Do not put country names in the keyword list. OpenAlex filters on country
-  server side, and a name based filter misses most of the corpus.
+- Country names live only in `KW_GEOGRAPHY`, for databases that cannot
+  filter on country. For OpenAlex use the server side filter on
+  `AFRICA_ISO2` instead: a name based filter misses most of the corpus.
+- Test a new string for recall as well as volume: it should find at least
+  90% of the practice's known includes (`03` section 0).
 - Test a new term on its own with `--dry` and look at the expected count. A
   query returning tens of thousands of records is too broad.
 - Adding a term means rerunning step 1 only. Everything downstream is keyed
@@ -171,11 +181,13 @@ an outcome block.
 
 ## 7. Adding a parameter or a schema field
 
-Under the protocol the schema is `docs/synthesis/extraction_schema.csv`, and
-phase 2 makes it the one definition the scripts read. A new field is added
-there, with the target it lands in (`lands_in`); a field that lands in no
-target does not belong in the schema. Until phase 2 the old arrangement
-below still describes the code.
+Under the protocol the schema is `docs/synthesis/extraction_schema.csv`. A
+new field is added there, with the target it lands in (`lands_in`); a field
+that lands in no target does not belong in the schema. Describe it in
+`02-extraction-schema.md`, rebuild the template with
+`Rscript R/00_shared/build_template.R`, and never edit the workbook by hand:
+the script overwrites it. Until phase 4 moves step 5 onto the new schema, the
+old arrangement below still describes the extraction code.
 
 The schema is the Excel column set. Its one definition is `SCHEMA_FIELDS` in
 `R/05_extract/extract_verbatim.R`, and its publication order is

@@ -22,7 +22,7 @@ PKGS <- c(
   # duplicate detection
   "stringdist",
   # Excel output
-  "openxlsx", "readxl",
+  "openxlsx", "readxl", "zip",
   # model calls
   "ellmer",
   # console output and repo root
