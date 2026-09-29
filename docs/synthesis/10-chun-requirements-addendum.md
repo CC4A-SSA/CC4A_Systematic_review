@@ -1,7 +1,8 @@
 # Addendum: what Chun's analysis needs from the synthesis
 
-**Status:** proposal, to be agreed with Chun Song and Pete Steward before the
-schema freeze on 16 October 2026.
+**Status:** agreed 29 September 2026 (decision D11 in `00`). The fields below
+are in `extraction_schema.csv`, `02-extraction-schema.md` and the extraction
+template.
 **Author:** Namita Joshi, 29 September 2026.
 
 This pack (files `00` to `09`) is the protocol. This addendum adds what
@@ -22,7 +23,7 @@ Chun's parameter sheet had six columns and three kinds of parameter.
 | `literature` | DOI or URL |
 | `detail` | Context: sample, wage basis, what the cost includes, horizon, discount rate |
 
-His worked rows, for agroforestry, show the kinds of evidence he expects:
+Her worked rows, for agroforestry, show the kinds of evidence she expects:
 
 - an adoption rate from a stratified survey, with the correction from the raw
   respondent share to the sampling frame rate;
@@ -47,7 +48,7 @@ His worked rows, for agroforestry, show the kinds of evidence he expects:
 | Adoption rate with its definition | `adoption_obs.definition_used`, `denominator`, `measure`, `value` |
 | Literature and detail | `source` and `quote`; every value carries a verbatim quote and locator (`04`) |
 
-## 3. Gaps, and the proposed fix
+## 3. Gaps, and the fix
 
 ### 3.1 Share of carbon income to farmers
 
@@ -55,7 +56,7 @@ His worked rows, for agroforestry, show the kinds of evidence he expects:
 there is no benefit sharing search. `cost.cost_class = farmer_payment`
 records a payment as a cost, not the share of carbon revenue it represents.
 
-**Proposal.** A new table, `benefit_share`, stream 1 and 4, one row per
+**Added.** A new table, `benefit_share`, stream 1 and 4, one row per
 project and arrangement.
 
 | Field | Type | Req | Allowed / unit | Description |
@@ -83,7 +84,7 @@ extract the share when a document already opened for costs reports it.
 finding such as "credit group membership raised adoption probability by 0.17
 percentage points" has no home.
 
-**Proposal.** A new table, `adoption_driver`, stream 4.
+**Added.** A new table, `adoption_driver`, stream 4.
 
 | Field | Type | Req | Allowed / unit | Description |
 |---|---|---|---|---|
@@ -94,7 +95,7 @@ percentage points" has no home.
 | `driver` | string | R |  | The factor, in the source's terms (credit access, tenure, extension contact, payment level) |
 | `driver_class` | enum | R | finance \| tenure \| information_extension \| payment_incentive \| labour \| market \| household \| other | For grouping across studies |
 | `effect_value` | number | R |  | As reported |
-| `effect_unit` | enum | R | percentage_points \| odds_ratio \| marginal_effect \| elasticity \| other | Unit of the effect |
+| `effect_unit` | enum | R | percentage_points \| odds_ratio \| marginal_effect \| elasticity \| payment_level \| other | Unit of the effect |
 | `model` | string | R |  | Estimation model (probit, logit, double hurdle, RCT difference) |
 | `significant` | enum | R | yes \| no \| unstated | At the level the source reports |
 | `sample_size` | integer | O |  |  |
@@ -110,18 +111,18 @@ studies. Chun's template includes discrete choice experiments on the payment
 needed to induce participation, and field experiments on payments. These are
 what size a carbon payment.
 
-**Proposal.** Keep the §4.4 exclusion for plain intention surveys ("would you
+**Added.** Keep the §4.4 exclusion for plain intention surveys ("would you
 adopt?"). Admit two kinds of study, tagged so they never mix with extent:
 
 - **payment experiments** with observed behaviour (a randomised payment and a
   measured outcome, such as the tree cover result in Chun's template) go into
   `adoption_driver` with `driver_class = payment_incentive`;
 - **choice experiments and willingness to accept** studies go into
-  `adoption_driver` with `effect_unit = other` and the stated payment level
-  in the quote, and a flag `stated_preference = yes`.
+  `adoption_driver` with `effect_unit = payment_level`, the currency and
+  basis in the quote, and `stated_preference = yes`.
 
-The `stated_preference` flag is added to `adoption_driver` as an enum,
-`yes | no`, required.
+`stated_preference` (`yes | no`, required) keeps what people say they would
+do apart from what they were observed to do. The two are never pooled.
 
 ### 3.4 Total and discounted costs
 
@@ -130,7 +131,11 @@ embed someone else's boundary and discount rate. There is no `total` cost
 class. Chun's template records a total discounted cost with its horizon and
 rate.
 
-**Proposal.** Keep the exclusion of BCRs, IRRs and NPVs of benefits. Add:
+**Decision (D12).** Collect totals, and flag them: the more is collected,
+the more there is to filter later. The caveat is that a total embeds the
+authors' boundary, horizon and discount rate, so it is never used in place of
+the itemised figures by default. Keep the exclusion of BCRs, IRRs and NPVs of
+benefits. Added:
 
 - `cost_class = total`, for a reported total cost of the practice;
 - `cost.discount_rate` (number, fraction, conditional: required when the
@@ -144,36 +149,38 @@ A total is extracted alongside its components where the source gives both,
 never instead of them. Chun decides whether a total enters NEB. The boundary
 fields apply to it as to any cost.
 
-## 4. The export Chun reads
+## 4. What Chun reads
 
-The synthesis fills the linked tables in `02`. Chun should not have to read
-them. Step 7 of the pipeline writes a flat sheet in Chun's six columns, one
-row per extracted value, generated from the tables:
+Chun reads the extraction template directly and takes what she needs from
+it. No separate export is built. What matters is that every item in her
+template is a column in the schema, and after §3 it is:
 
-| Chun column | Filled from |
+| Chun's template | Schema |
 |---|---|
-| `parameter` | `cost.cost_class`, `adoption_obs.measure`, `adoption_driver`, `benefit_share` |
-| `definition` | `adoption_obs.definition_used`, `cost.item`, `adoption_driver.driver` |
-| `practice` | `practice_id` |
-| `value` | value, unit and currency as reported |
-| `literature` | `source.doi_or_url` |
-| `detail` | boundary flags, sample size, horizon and discount rate, the verbatim quote and locator |
-
-One set of numbers, two views. Nothing is extracted twice.
+| Adoption rate | `adoption_obs.value`, `measure`, `definition_used`, `denominator` |
+| Determinant of adoption | `adoption_driver` |
+| Payment response, choice experiments | `adoption_driver` with `driver_class = payment_incentive` |
+| Total cost | `cost` with `cost_class = total`, `author_computed`, `discount_rate`, `horizon_years` |
+| Installation cost | `cost` with `cost_class = establishment_fixed` |
+| Variable cost | `cost` with `cost_class = variable_running` |
+| Share of carbon income to farmers | `benefit_share` |
+| Literature | `source.doi_or_url` |
+| Detail | the boundary fields, `labour_rate`, `sample_size`, and the verbatim quote and locator |
 
 ## 5. Timing
 
-`07` places the full adoption sweep (stream 4) in January and February 2027,
-after the mid-December handover. Adoption, drivers and payment response are
-logged as encountered before then (`00`, Q2). If Chun needs adoption
-parameters earlier, agree the date with Pete and Chun now, because it moves
-work into the pilot period.
+Adoption, adoption drivers and benefit sharing are searched and extracted
+together with the rest of the review, from the first searches, with their
+literature kept separate (decision D8 in `00`). This replaces the January to
+February sweep in `07`.
 
-## 6. Questions for Chun
+## 6. Chun's answers
 
-1. Are the four additions above what you need, and is anything else missing?
-2. Is the flat export in §4 the format you want, or would you rather read the
-   cost table directly?
-3. When do you need adoption and benefit sharing figures?
-4. Do you want reported total costs at all, given that the itemised figures
-   and their boundaries will be there?
+Answered by Namita on Chun's behalf, 29 September 2026.
+
+| Question | Answer |
+|---|---|
+| Are the additions what is needed; is anything missing? | The additions and Pete's template are thorough. Nothing else is needed |
+| Flat export, or read the table directly? | Chun extracts what she needs from the final Excel template. Her requirements must be among its columns (§4) |
+| When are adoption and benefit sharing needed? | Together with the rest of the review (§5) |
+| Collect reported total costs? | Yes, with the caveats stated. Collect more and filter later (§3.4) |

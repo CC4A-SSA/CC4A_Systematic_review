@@ -43,7 +43,7 @@ locator.
 | `synthesis/07-sequencing-and-effort.md` | Dates, working model, handover note |
 | `synthesis/08-request-to-adaptation-insights.md` | What to ask Andreea Nowak's team for |
 | `synthesis/09-adversarial-review.md` | Four reviews of the pack and what was done about each finding |
-| `synthesis/10-chun-requirements-addendum.md` | What Chun needs that the pack did not carry, and the flat export he reads |
+| `synthesis/10-chun-requirements-addendum.md` | What Chun needs that the pack did not carry, and where each item lands in the schema |
 | `synthesis/CLAUDE.md` | Rules for an AI session doing synthesis work |
 | `synthesis/PROMPT - design the evidence synthesis handover for Namita.md` | The brief the pack was written from |
 
@@ -62,13 +62,14 @@ AI and judgement to people; the pipeline is where the AI part runs, logged
 and repeatable.
 
 The pipeline is being moved from its first scope (cost and adoption only) to
-this protocol in phases. See `README.md` §9.
+this protocol in phases. See `README.md` §10.
 
 ## 4. Copy of record
 
-From this commit, the copy in this repository is the copy of record. Changes
-go through a pull request and are logged in §6. The SharePoint Synthesis
-folder is a mirror for people who do not use GitHub.
+The copy in this repository is the copy of record (decision D10 in
+`synthesis/00`; Namita leads the synthesis). Changes go through a pull
+request and are logged in §6. The SharePoint Synthesis folder is a mirror for
+people who do not use GitHub.
 
 ## 5. Questions from the first protocol, now settled
 
@@ -82,11 +83,12 @@ answers all of them.
 | Base year and deflator for currency | Not ours. Currency and price year are recorded as reported; Chun converts (`synthesis/00`, D5) |
 | Whether grey literature belongs in the corpus | Yes. Grey literature, project evaluations and carbon project documents carry much of the cost detail (`synthesis/03`) |
 
-Open questions now live in `synthesis/00` (Q1 to Q9, for Pete) and
-`synthesis/10` §6 (for Chun).
+Open questions now live in `synthesis/00`: Q1 and Q3 to Q9, for Pete. Q2
+and Chun's questions are settled (D8 to D12).
 
 ## 6. Amendment log
 
 | Date | Change | By |
 |---|---|---|
 | 2026-09-29 | Pack adopted as the protocol; Chun addendum (`synthesis/10`) added as a proposal | Namita Joshi |
+| 2026-09-29 | Decisions D8 to D12 (`synthesis/00`): adoption searched with everything else, literature kept separate; Adaptation Insights request deferred; repository is the copy of record; Chun's requirements agreed; total costs collected and flagged. `synthesis/10` marked agreed. `adoption_driver` and `benefit_share` tables, and `cost_class = total`, `author_computed`, `discount_rate`, `horizon_years`, added to the schema. Payment and choice experiments admitted to stream 4 (`synthesis/03` §4.4); driver and benefit sharing strings added (§4.3); `synthesis/07` annotated. Template now built from the CSV by `R/00_shared/build_template.R` | Namita Joshi |

@@ -2,6 +2,8 @@
 
 Tied to the geospatial work plan's dates. Task codes (A1, F7 …) are the plan's.
 
+> **Amended 29 September 2026 (Namita, decisions D8–D9 in `00`).** Stream 4 (adoption, adoption drivers, benefit sharing) now runs alongside Streams 1–3 from the first searches, with its literature kept separate, rather than in a January–February sweep. The Adaptation Insights request (`08`) is deferred: it is not sent in week one. The tables below are the original plan; where they place Stream 4 in January or the `08` request in week one, this note wins.
+
 **Namita leads the synthesis until mid-December 2026.** The plan is to get as far as possible by then and hand over; the work after that point is shown below without a named owner. Because every extraction, verification and recipe lives in this folder with its log, a successor can pick up from the files rather than from a briefing.
 
 ## 1. Fixed dates this synthesis has to hit

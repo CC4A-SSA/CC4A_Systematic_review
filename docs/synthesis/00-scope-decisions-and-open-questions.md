@@ -12,6 +12,18 @@
 | D6 | Worked example? | **Biochar, illustrative.** | `06-…` and the YAML use invented numbers, clearly marked. No real extraction has been done. |
 | D7 | Continuity | **Namita leads until mid-December 2026; progress is taken stock of then and the work handed over.** | Pilots, loss matrix and dataset register first; remaining recipes breadth first; a status note at handover (`07` §4). Successor to be named |
 
+## Decided by Namita, 29 September 2026
+
+Namita leads this work. These settle or add to the questions below.
+
+| # | Question | Decision | What it means |
+|---|---|---|---|
+| D8 | Q2, adoption timing | **Adoption is searched together with everything else.** | Stream 4 runs from the start, alongside Streams 1–3, with its own strings, search log and screening, so the literatures stay separate. Supersedes the January–February sweep in `07` |
+| D9 | When to send the Adaptation Insights request (`08`) | **Later.** | Not sent in week one; they are unlikely to hold much yet. Their synthesis is still consumed wherever it covers a practice, once it exists |
+| D10 | Copy of record | **The GitHub repository** (`docs/synthesis/`). | Changes go through a pull request and the amendment log in `docs/protocol.md`. The SharePoint Synthesis folder is a mirror |
+| D11 | Chun's requirements (`10`) | **Agreed**, answered by Namita on Chun's behalf. | The benefit sharing and adoption driver tables, payment experiments and choice experiments, and total costs are in the schema. Chun reads the extraction template directly; no separate export is needed. Adoption and benefit sharing run with the rest of the review (D8) |
+| D12 | Reported total costs | **Collected, and flagged.** | `cost_class = total` with `author_computed`, `discount_rate` and `horizon_years`. Totals embed the authors' boundary and discount rate, so they are kept alongside the itemised figures and filtered later, not used by default |
+
 Kept regardless, because the method breaks without them: stress-season and normal-season effects extracted separately; coordinates and dates captured so seasons can be classified; comparator and dose recorded for every effect; null and negative findings captured; practice definitions anchored to era-aom.
 
 ## Explicitly out of scope
@@ -40,7 +52,7 @@ These are the ones where a wrong assumption would waste Namita's time.
 
 **Q1. Enablers and constraints in the recipe.** Annex B of the work plan has "enablers and constraints as mappable flags" in the Adaptation block. D3 strikes them from extraction. Proposal: at schema freeze (mid-October) the recipe keeps route drivers (Routing block) and production moderators (Production block), and the enabler/constraint field is dropped from the MVP recipe rather than left empty. Confirm, or say which enablers must survive. The practitioner review (`09`) asks for at least a free-text note on input access (seedlings, kilns, herbicide, water control) so farm-level feasibility is not lost silently; the pack now records `dose_farm_feasible` and `water_control_level` but no general enabler field.
 
-**Q2. Adoption timing.** Proposal: before mid-January, adoption evidence is only *logged as encountered* (one row, citation and a sentence); the real Stream 4 search runs mid-January to end-February so Activity 4 has current extent before the 15 March country workshops. Confirm the timing, and whether Pedro Chilambe's team (Activity 4) co-owns it.
+**Q2. Adoption timing.** *Settled 29 Sep 2026 by D8: searched together with everything else, literature kept separate. Whether Pedro Chilambe's team co-owns it is still open.* Original proposal: before mid-January, adoption evidence is only *logged as encountered* (one row, citation and a sentence); the real Stream 4 search runs mid-January to end-February so Activity 4 has current extent before the 15 March country workshops. Confirm the timing, and whether Pedro Chilambe's team (Activity 4) co-owns it.
 
 **Q3. The pilot draft date.** Work plan task A3 has pilot recipe drafts at mid-October — the same date the schema freezes. Drafting three recipes against an unfrozen schema means redrafting. Proposal: pilot drafts end October, review gate mid-November as planned. Confirm.
 

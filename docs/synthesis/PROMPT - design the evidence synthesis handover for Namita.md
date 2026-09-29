@@ -61,7 +61,7 @@ Be deliberately conservative at moderate severity. Farmers are already adapted t
 ## Explicitly out of scope
 
 - **Methodologies for predicting spatial suitability, yield response or profitability.** Reviewing the literature for those methods is a separate strand of work. Do not include it here, and do not let the search drift into it.
-- **Net economic benefit analysis.** Chun Song owns it. This synthesis supplies cost and benefit parameters to him; it does not compute NEB. Make the boundary explicit in the handover so there is one cost parameter set rather than two.
+- **Net economic benefit analysis.** Chun Song owns it. This synthesis supplies cost and benefit parameters to her; it does not compute NEB. Make the boundary explicit in the handover so there is one cost parameter set rather than two.
 - **Adoption rates and current extent.** Activity 4. Confirm this with Pete rather than assuming.
 
 ## What the handover pack must contain

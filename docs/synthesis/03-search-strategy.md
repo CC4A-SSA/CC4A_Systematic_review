@@ -235,6 +235,21 @@ Survey "minimum tillage" is rarely our CA bundle; "agroforestry" in a household 
 AND [geography block]
 ```
 
+Drivers and payment response (added 29 Sep 2026, `10`):
+```
+[practice block] AND (determinant* OR "factors influencing" OR "drivers of adoption" OR "choice experiment" OR "willingness to accept"
+ OR "payment for ecosystem services" OR PES OR "conditional payment" OR "incentive payment")
+AND [geography block]
+```
+
+Benefit sharing (added 29 Sep 2026, `10`; mostly found in documents opened for costs):
+```
+[practice block] AND ("carbon credit*" OR "carbon revenue" OR "carbon payment*" OR "benefit sharing" OR "benefit-sharing" OR "revenue sharing")
+AND [geography block]
+```
+
 ### 4.4 Inclusion — Stream 4
 
-Every row records `context` (pre-project baseline, within project, non-project, general population) and `reporter` (independent survey vs implementer self-report): baseline adoption bears on additionality, and implementer counts tend to be trainees rather than current users. Include national or subnational figures with a stated reference year, measure and denominator; project figures only with the project area stated (they are not extent estimates, they are lower bounds for the project geography). Exclude adoption *intentions* and willingness-to-adopt studies. Log adoption encountered during Streams 1–3 as a row with `adoption_logged`, then sweep properly in the Stream 4 window (see `07`).
+Every row records `context` (pre-project baseline, within project, non-project, general population) and `reporter` (independent survey vs implementer self-report): baseline adoption bears on additionality, and implementer counts tend to be trainees rather than current users. Include national or subnational figures with a stated reference year, measure and denominator; project figures only with the project area stated (they are not extent estimates, they are lower bounds for the project geography). Exclude plain adoption *intentions* ("would you adopt?"). **Amended 29 Sep 2026 (`10` §3.3):** payment experiments with observed behaviour, and choice experiments or willingness-to-accept studies on the payment needed to induce participation, are included and extracted to `adoption_driver` (with `stated_preference` set), never to `adoption_obs`. Determinants of adoption go to `adoption_driver` as well.
+
+**Amended 29 Sep 2026 (decision D8 in `00`):** Stream 4 runs **alongside** Streams 1–3, not in a later window. The literature is kept separate: Stream 4 has its own strings (§4.3), its own search log rows and its own screening decisions, so a record found by the adoption search is never counted in the practice-evidence funnel or the other way round. A record found by one stream that also reports another stream's evidence is extracted for both and tagged in `source.streams`.
