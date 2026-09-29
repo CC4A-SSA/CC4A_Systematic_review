@@ -17,10 +17,25 @@ Read this before writing anything. If a rule here disagrees with something in
 
 ## 1. What this repo is
 
-An R pipeline that harvests the costs and the adoption rates of climate
-adaptation practices in African agriculture out of the published literature,
-and delivers them as an Excel parameter database for a carbon credit project.
-Seven steps, one folder per step under `R/`.
+An R pipeline that runs the evidence synthesis for Activity 2 of INV-089367
+(CC4A): it reads the literature for the production effect, avoided loss,
+costs and adoption of carbon crediting practices in sub-Saharan Africa, checks
+every value against its source, and delivers tables for the geospatial
+recipe engine and for Chun Song's net economic benefit analysis. Seven steps,
+one folder per step under `R/`.
+
+**The protocol is `docs/synthesis/`**, indexed by `docs/protocol.md`. It
+decides what is extracted, from what, and how it is checked. This file
+decides how the code is written. On an analytical question the protocol
+wins; on a coding question this file wins. `docs/synthesis/CLAUDE.md` holds
+the rules for a session doing synthesis work (extracting or verifying)
+rather than writing code; read it before touching extraction or verification
+prompts.
+
+The pipeline is being moved from its first scope (costs and adoption only)
+to the protocol in phases, listed in `README.md` §9. Where the code or the
+catalogues still reflect the first scope, the protocol is the target: do not
+extend the old design.
 
 What comes out of here gets multiplied by hectares and by years inside a
 financial model, far from anyone who could check it against a paper. The
@@ -156,6 +171,12 @@ an outcome block.
 
 ## 7. Adding a parameter or a schema field
 
+Under the protocol the schema is `docs/synthesis/extraction_schema.csv`, and
+phase 2 makes it the one definition the scripts read. A new field is added
+there, with the target it lands in (`lands_in`); a field that lands in no
+target does not belong in the schema. Until phase 2 the old arrangement
+below still describes the code.
+
 The schema is the Excel column set. Its one definition is `SCHEMA_FIELDS` in
 `R/05_extract/extract_verbatim.R`, and its publication order is
 `SHEET_PARAMETERS` in `R/07_publish/export_results.R`. Both have to change
@@ -202,15 +223,17 @@ extraction calls for one paper cost barely more than one. Slip an instruction
 in ahead of the document and the bill roughly doubles for no benefit.
 
 **Currency.** A cost is comparable only once the currency, the study year
-and the area are all fixed. Record all three as the paper gives them, then
-convert in code. Never ask the model to convert a currency.
+and the area are all fixed. Record all three as the paper gives them. The
+pipeline does not convert currency or deflate: under the protocol Chun does
+(`docs/synthesis/00`, D5). Never ask the model to convert a currency.
 
 **Person-days are not money.** Do not price labour. The carbon model does
 that with its own wage assumptions.
 
 **A review or a meta-analysis can double count.** The pooled figure and the
-underlying studies can both enter the corpus. Flag these at screening and
-settle the rule in `docs/protocol.md` before the full run.
+underlying studies can both enter the corpus, and so can an ERA record of the
+same trial. The protocol counts independence on trials, not papers: one
+`trial_id` per physical trial (`docs/synthesis/02` §2).
 
 ## 9. Before you commit
 

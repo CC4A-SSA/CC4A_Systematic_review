@@ -1,16 +1,26 @@
 # CC4A: costs and adoption of climate adaptation practices in Africa
 
-Carbon Credits 4 Adaptation (CC4A) needs two numbers for every adaptation
-practice it might finance: what it costs to establish on a hectare of African
-farmland, and what share of farmers actually take it up. This repository is
-the machinery that reads those numbers out of the published literature and
-hands them to the project's financial model as a spreadsheet.
+Carbon Credits 4 Adaptation (CC4A), Activity 2 of INV-089367, needs to know
+for every practice it might finance: how much it raises yield in a normal
+year, how much loss it avoids when drought, heat or flood hits, what it
+costs, and how widely it is already used. This repository is the machinery
+that reads that evidence out of the literature, checks it, and hands it on
+as tables: practice recipes and a loss matrix for the geospatial engine, and
+a cost table, adoption tables and a benefit sharing table for Chun Song's net
+economic benefit analysis.
+
+**The protocol is `docs/synthesis/`**, the handover pack Pete Steward wrote,
+plus an addendum for Chun's requirements. Start with `docs/protocol.md`,
+which indexes it. The pipeline is being moved to that protocol in phases
+(§9); until then, parts of this README describe the first design, which
+covered costs and adoption only.
 
 Seven steps, each one a folder under `R/`, numbered in running order. A
-search against OpenAlex, a duplicate pass, an abstract level scope decision, a
-full text download, an extraction that quotes the paper rather than
-paraphrasing it, a mapping onto controlled vocabularies, and an Excel export
-carrying its own quality score.
+search, a duplicate pass, an abstract level scope decision, a full text
+download, an extraction that quotes the paper rather than paraphrasing it, a
+mapping onto controlled vocabularies, and an export carrying its own quality
+score. The new protocol adds an independent verification pass between
+extraction and harmonisation.
 
 
 Contact: Namita Joshi, Alliance Bioversity International and CIAT
@@ -45,6 +55,17 @@ Contact: Namita Joshi, Alliance Bioversity International and CIAT
 A diagram of this belongs in `docs/workflow_diagram.md`, which currently holds
 the same seven steps as a sketch.
 
+What the protocol changes, step by step:
+
+| Step | Change | Protocol |
+|---|---|---|
+| 1 | ERA first, then databases; grey literature and carbon project documents taken in by hand; strings per stream | `synthesis/03` |
+| 3 | Two independent model screens, kappa of at least 0.7 before screening goes routine, recall of at least 95% on a known includes set, a sample of double exclusions checked by a person | `synthesis/03` §0 |
+| 5 | Linked tables (source, study, site season, effect, cost, quote) instead of one flat row per parameter; cell means by season with coordinates and dates | `synthesis/02` |
+| new | Verification: does the quote exist, does it support the claim, blind re-extraction of key numbers, planted errors; failures logged, never silently fixed | `synthesis/04` |
+| 6 | No currency conversion. Currency and price year are recorded as reported; Chun converts | `synthesis/00` D5 |
+| 7 | Exports the extraction template, draft recipes, and a flat sheet in Chun's columns | `synthesis/10` §4 |
+
 ## 2. What the repository carries
 
 The repository carries scripts and the small tables those scripts read. It
@@ -54,7 +75,7 @@ carries no papers, no run output and no credentials.
 |---|---|
 | `R/`, every script | Downloaded full texts, which land in `outputs/04_fulltext/pdf/` |
 | `catalogues/`, the vocabularies, keyword list, gold set and decision cache | Everything under `outputs/`, git ignored and rebuilt by the scripts |
-| `docs/protocol.md`, the review protocol | `catalogues/search_raw.csv`, the raw result set, rebuilt by step 1 |
+| `docs/protocol.md` and `docs/synthesis/`, the review protocol | `catalogues/search_raw.csv`, the raw result set, rebuilt by step 1 |
 | `CLAUDE.md` and `.claude/`, notes for AI coding sessions | API keys, which live in `.Renviron` and are git ignored |
 
 Layout is settled in one file, `R/00_shared/paths.R`. Scripts locate the
@@ -136,8 +157,9 @@ script.
 
 ### docs/
 
-`protocol.md` sets out the question, the scope criteria and the method for
-each stage, and closes with the questions still unsettled.
+`protocol.md` is the index to the protocol and its amendment log.
+`synthesis/` is the protocol itself: Pete's handover pack (`00` to `09`,
+the schema CSV and the Excel template) and the Chun addendum (`10`).
 `workflow_diagram.md` is where the one page figure will go.
 
 ### outputs/
@@ -153,6 +175,14 @@ anatomy every script follows, the traps worth knowing, and a walkthrough for
 adding a practice. Not needed to run anything.
 
 ## 4. The extraction schema
+
+**Being replaced.** The schema under the new protocol is
+`docs/synthesis/extraction_schema.csv`: linked tables (source, study, site
+season, effect, mechanism, cost, characteristic, loss, adoption, dataset,
+quote, verification, gap) with 74 core fields for the pilots, plus the
+benefit sharing and adoption driver tables proposed in `synthesis/10`. Phase
+2 makes that CSV the one definition the scripts read. What follows describes
+the first design and stays until then.
 
 These are the columns of the Excel parameter database. The set is defined
 once, as `SCHEMA_FIELDS` in `R/05_extract/extract_verbatim.R`, and published
@@ -186,6 +216,14 @@ because the wage assumption belongs to the financial model and not to this
 review.
 
 ## 5. Keywords and search strategy
+
+**Being replaced.** The protocol has four searches, one per stream (practice
+evidence, long term trials and datasets, the loss matrix, adoption), each
+with its own strings, sources and inclusion rules: `synthesis/03`. Two
+things below change with it. Evidence from outside Africa is admitted for
+mechanism, and for effect sizes where African evidence is thin
+(`synthesis/01` §1.4), so the Africa filter can no longer be applied to every
+query. And OpenAlex becomes one source among several, after ERA.
 
 A query is a cross rather than a phrase. A record has to look like it is about
 a practice and like it contains a figure.
@@ -329,24 +367,32 @@ every record, so an interrupted run continues rather than restarts.
 
 ## 9. Current state
 
-As of 22 September 2026.
+As of 29 September 2026.
 
 | Measure | Value |
 |---|---|
 | Skeleton built, all seven steps | yes |
 | Steps implemented | none yet |
-| Practices in the vocabulary | 7, plus `other` |
+| Protocol | adopted: `docs/synthesis/`, freezes 16 October 2026 |
+| Practices in the vocabulary | 7, plus `other`; to be rebuilt from the protocol's 13 |
 | Units in the vocabulary | 10, plus `other` |
 | Records searched | 0 |
 | Records extracted | 0 |
 | Gold set records | 0, still to be extracted by hand |
 
-Next up: `R/01_search/openalex_search.R`.
+Moving the pipeline to the protocol, one pull request per phase:
 
-The unsettled questions are listed at the end of `docs/protocol.md`. Two of
-them block a full run rather than merely annoying: how to admit a
-meta-analysis without counting its component studies twice, and which
-deflator series to standardise currency against.
+| Phase | What | Status |
+|---|---|---|
+| 1 | Protocol into `docs/`, Chun addendum, README and CLAUDE.md rescoped | this change |
+| 2 | Catalogues: practices from `synthesis/01` with era-aom codes and the not taken forward list; strings per stream from `synthesis/03`; the schema CSV as the one definition the scripts read | before 16 October |
+| 3 | Steps 1 and 3: ERA query, manual intake of grey literature, second screen, kappa and recall | |
+| 4 | Step 5 to linked tables, the verification step, step 6 without currency conversion, step 7 exports | |
+| 5 | Biochar pilot end to end, costs and effects, to test the schema before it freezes | |
+
+Open questions: `synthesis/00` (Q1 to Q9, for Pete) and `synthesis/10` §6
+(for Chun). The four questions that ended the first protocol are settled;
+see `docs/protocol.md` §5.
 
 ## 10. Extending it
 
