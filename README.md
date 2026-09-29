@@ -83,38 +83,6 @@ ERA and the trial archives rather than by keyword search, and its site lists
 go to S5 before any data are requested. Stream 4 stops at stage 6: adoption,
 driver and benefit sharing rows need no season classification.
 
-### 1.3 What each person does
-
-| Who | Role in the review |
-|---|---|
-| Namita Joshi | Leads. Sets up each practice, decides at screening, signs off extraction batches, proposes tiers and mechanisms, adjudicates |
-| AI | Searching, screening passes, extraction and verification: the volume. Never the final decision on inclusion, tier or mechanism |
-| Pete Steward | Severity definitions and hazard mapping, the bronze loss matrix values with Namita, end to end audit of a sample |
-| S5 | Season classification and the estimator |
-| Reviewers (Andreea Nowak, Lucy Njuguna, ERA) | The review gate on each recipe |
-| Chun Song | Reads the cost, adoption and benefit sharing tables from the template for the net economic benefit analysis. Converts currency and sets cost defaults |
-
-### 1.4 What is automated today
-
-Nothing yet runs end to end. Today the protocol, the schema, the Excel
-template, the practice list and the search strings are in place. The seven R
-steps below are skeletons, and are being built against the protocol in the
-order in §10. Until a step exists, that stage is done by an AI session
-working from `docs/synthesis/CLAUDE.md` and filling the template by hand, with
-the same logging and verification rules.
-
-### 1.5 Dates
-
-| When | What |
-|---|---|
-| 16 October 2026 | Schema and protocol frozen. Maize loss matrix, drought and heat, first pass |
-| End October | First drafts of the three pilot recipes |
-| 13 November | Pilots through the review gate |
-| End November | Full loss matrix |
-| Mid December | Remaining practices as far as they get; handover status note |
-| Mid January 2027 | All Go practice recipes reviewed |
-
-Full plan: `07-sequencing-and-effort.md`.
 
 ## 2. The seven steps
 
