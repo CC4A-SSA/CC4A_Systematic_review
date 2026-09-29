@@ -1,4 +1,4 @@
-# CC4A: costs and adoption of climate adaptation practices in Africa
+# CC4A: evidence synthesis for carbon crediting practices in Africa
 
 Carbon Credits 4 Adaptation (CC4A), Activity 2 of INV-089367, needs to know
 for every practice it might finance: how much it raises yield in a normal
