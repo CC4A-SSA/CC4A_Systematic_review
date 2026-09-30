@@ -1,0 +1,162 @@
+verification_id,quote_id,record_ref,verifier,date,check_a_exists,check_b_supports,blind_value,value_match,failure_mode,resolution,resolved_by,planted_error,note
+VER-00001,QTE-6134030-001,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00002,QTE-6134030-002,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,supports,,,,no_action_needed,,,
+VER-00003,QTE-6134030-003,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,supports,,,,no_action_needed,,,
+VER-00004,QTE-6134030-004,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00005,QTE-6134030-005,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00006,QTE-6134030-006,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00007,QTE-6134030-007,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00008,QTE-6134030-008,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00009,QTE-6134030-009,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00010,QTE-6134030-010,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00011,QTE-6134030-011,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00012,QTE-6134030-012,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00013,QTE-6134030-013,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00014,QTE-6134030-014,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00015,QTE-6134030-015,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,supports,,within_tolerance,,no_action_needed,,,"Figure-digitised; checked by eye against the rendered Figure 6: NT ~1850, SM ~1790, CT ~1010 at Goma 2019 season 1"
+VER-00016,QTE-6134030-016,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00017,QTE-6134030-017,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00018,QTE-6134030-018,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00019,QTE-6134030-019,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00020,QTE-6134030-020,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00021,QTE-6134030-021,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00022,QTE-6134030-022,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00023,QTE-6134030-023,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00024,QTE-6134030-024,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00025,QTE-6134030-025,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00026,QTE-6134030-026,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00027,QTE-6134030-027,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00028,QTE-6134030-028,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00029,QTE-6134030-029,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00030,QTE-6134030-030,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00031,QTE-6134030-031,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,supports,,,,no_action_needed,,,"Gross cost covers 14 months, not one season"
+VER-00032,QTE-6134332-001,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00033,QTE-6134332-002,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00034,QTE-6134332-003,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00035,QTE-6134332-004,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00036,QTE-6134332-005,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00037,QTE-6134332-006,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00038,QTE-6134332-007,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00039,QTE-6134332-008,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00040,QTE-6134332-009,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00041,QTE-6134332-010,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,supports,,,,no_action_needed,,,
+VER-00042,QTE-6134332-011,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00043,QTE-6134332-012,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00044,QTE-6134332-013,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00045,QTE-6134332-014,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00046,QTE-6134332-015,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00047,QTE-6134332-016,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00048,QTE-6134332-017,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00049,QTE-6134332-018,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00050,QTE-6134332-019,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,supports,,,,no_action_needed,,,Row 0/0 of Table 6; column order grain cycles 1-4 then straw 1-4 confirmed against the page
+VER-00051,QTE-6134332-020,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00052,QTE-6134332-021,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,supports,,,,no_action_needed,,,
+VER-00053,QTE-6134332-022,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00054,QTE-6134332-023,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00055,QTE-6134332-024,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00056,QTE-6134332-025,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00057,QTE-6134332-026,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00058,QTE-6134332-027,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,supports,,,,no_action_needed,,,Per tonne of char or of husk is not stated; extractor assumed char
+VER-00059,QTE-6134332-028,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00060,QTE-6134332-029,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00061,QTE-6134332-030,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00062,QTE-6134332-031,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00063,QTE-6134332-032,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00064,QTE-6134332-033,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00065,QTE-6134332-034,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00066,QTE-6134332-035,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00067,QTE-6135671-001,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,supports,,,,no_action_needed,,,"GY is the fourth numeric column; values 1.17, 3.03, 4.83 confirmed"
+VER-00068,QTE-6135671-002,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00069,QTE-6135671-003,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00070,QTE-6135671-004,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00071,QTE-6135671-005,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00072,QTE-6135671-006,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00073,QTE-6135671-007,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00074,QTE-6135671-008,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00075,QTE-6135671-009,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00076,QTE-6135671-010,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00077,QTE-6135671-011,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00078,QTE-6135671-012,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,partially,,,other,,,,Rainy season statement supports rainfed only by inference; the paper never says the trial was unirrigated
+VER-00079,QTE-6135671-013,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00080,QTE-6135671-014,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00081,QTE-6135671-015,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00082,QTE-6135671-016,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,supports,,,,no_action_needed,,,Header only; the values come from the row quotes
+VER-00083,QTE-6135671-017,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00084,QTE-6135671-018,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,supports,,,,no_action_needed,,,
+VER-00085,QTE-6135671-019,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00086,QTE-6135671-020,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00087,QTE-6135671-021,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00088,QTE-6135671-022,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00089,QTE-6135671-023,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00090,QTE-6135671-024,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00091,QTE-6135671-025,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00092,QTE-6135671-026,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00093,QTE-6135863-001,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00094,QTE-6135863-002,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00095,QTE-6135863-003,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00096,QTE-6135863-004,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00097,QTE-6135863-005,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00098,QTE-6135863-006,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00099,QTE-6135863-007,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00100,QTE-6135863-008,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00101,QTE-6135863-009,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00102,QTE-6135863-010,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00103,QTE-6135863-011,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00104,QTE-6135863-012,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00105,QTE-6135863-013,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,supports,,,,no_action_needed,,,"Quote supports the printed LSD; the paper's LSD and CV are mutually inconsistent, so the dispersion value is doubtful"
+VER-00106,QTE-6135863-014,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,supports,,,,no_action_needed,,,Main effect means averaged over NPS rates
+VER-00107,QTE-6135863-015,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00108,QTE-6135863-016,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,supports,,,,no_action_needed,,,Control arm TVC is 0.00 ETB/ha as printed
+VER-00109,QTE-6135863-017,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00110,QTE-6135863-018,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00111,QTE-6135863-019,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00112,QTE-6135863-020,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00113,QTE-6135863-021,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,supports,,,,no_action_needed,,,
+VER-00114,QTE-6135863-022,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00115,QTE-6135863-023,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00116,QTE-6135863-024,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00117,QTE-6135863-025,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00118,QTE-6135863-026,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00119,QTE-6135863-027,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00120,QTE-6135863-028,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00121,QTE-6135863-029,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00122,QTE-6135863-030,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00123,QTE-6135863-031,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00124,QTE-6137948-001,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00125,QTE-6137948-002,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00126,QTE-6137948-003,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00127,QTE-6137948-004,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00128,QTE-6137948-005,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00129,QTE-6137948-006,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00130,QTE-6137948-007,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00131,QTE-6137948-008,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00132,QTE-6137948-009,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00133,QTE-6137948-010,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00134,QTE-6137948-011,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00135,QTE-6137948-012,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00136,QTE-6137948-013,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00137,QTE-6137948-014,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00138,QTE-6137948-015,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00139,QTE-6137948-016,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00140,QTE-6137948-017,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00141,QTE-6137948-018,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00142,QTE-6137948-019,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00143,QTE-6137948-020,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,supports,,,,no_action_needed,,,"Row reads TVC 396 000, yields 720 and 2204, then revenues"
+VER-00144,QTE-6137948-021,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00145,QTE-6137948-022,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00146,QTE-6137948-023,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00147,QTE-6137948-024,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,supports,,,,no_action_needed,,,
+VER-00148,QTE-6137948-025,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00149,QTE-6137948-026,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00150,QTE-6137948-027,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00151,QTE-6137948-028,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00152,QTE-6137948-029,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00153,QTE-6137948-030,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00154,QTE-6137948-031,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00155,QTE-6137948-032,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00156,QTE-6137948-033,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00157,QTE-6137948-034,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00158,QTE-6137948-035,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00159,QTE-6137948-036,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00160,QTE-6137948-037,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,,,,,,,,check B not yet done
+VER-00161,QTE-6137948-038,,"Claude (claude-opus-5-5), main session, independent of the extractors",2026-09-30,exact,supports,,,,no_action_needed,,,

@@ -299,13 +299,17 @@ Shared with Chun Song. One row per cost item. A figure with no boundary statemen
 | `practice_id` | ● | enum | R | (as study) | Practice | cost table |
 | `cost_class` | ● | enum | R | establishment_fixed \| variable_running \| replacement \| maintenance \| total \| project_setup \| aggregation_extension \| mrv_monitoring \| validation_verification \| registry_issuance \| farmer_payment | Farm level: establishment_fixed, variable_running, replacement, maintenance (era-aom Fixed/Variable Cost), and total for a reported total cost (`10` §3.4: alongside its components, never instead of them; set `author_computed`). Project level (carbon-project documents): project_setup … farmer_payment. Farm-level rows are the priority; project-level rows are captured when met, not searched for separately | cost table |
 | `item` | ● | string | R |  | What the figure covers (for example 'biochar production, kiln and labour') | cost table |
-| `value` | ● | number | R |  | As reported | cost table |
+| `value` | ● | number | C |  | As reported. Required unless the source gives a range, then `value_min` and `value_max` instead | cost table |
+| `value_min` |  | number | C |  | Lower end, when the source gives a range (for example 1 in '1-26 person-days'). Leave `value` empty | cost table |
+| `value_max` |  | number | C |  | Upper end of a range. Filled with `value_min` | cost table |
 | `unit_basis` | ● | enum | R | per_ha \| per_ha_per_season \| per_ha_per_year \| per_head \| per_farm \| per_project \| per_tonne_input | Denominator | cost table |
 | `currency` | ● | string | R | ISO 4217 | As reported. Not converted | cost table (Chun converts) |
 | `price_year` | ● | integer | R |  | Year of the prices. If unstated, record publication year and set price_year_basis | cost table |
 | `price_year_basis` |  | enum | R | stated \| assumed_publication_year \| assumed_data_year |  | cost table |
 | `labour_included` | ● | enum | R | yes \| no \| unstated | Is labour in the figure? | cost table boundary |
-| `labour_days` |  | number | C | person-days per unit_basis | Required if reported | cost table |
+| `labour_days` |  | number | C | person-days per unit_basis | Required if reported, unless the source gives a range | cost table |
+| `labour_days_min` |  | number | C | person-days per unit_basis | Lower end when labour is reported as a range. Leave `labour_days` empty | cost table |
+| `labour_days_max` |  | number | C | person-days per unit_basis | Upper end of a labour range | cost table |
 | `labour_rate` |  | string | C | value, currency, basis | Rate used and its basis (market wage, opportunity cost, minimum wage) | cost table boundary |
 | `family_labour_costed` | ● | enum | R | yes \| no \| unstated | Is family labour valued? | cost table boundary |
 | `inputs_included` |  | enum | R | yes \| no \| unstated | Materials and inputs | cost table boundary |

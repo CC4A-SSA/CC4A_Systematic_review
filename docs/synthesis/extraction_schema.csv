@@ -104,13 +104,17 @@ cost,1,admin1,,string,O,,Subnational unit if stated,cost table
 cost,1,practice_id,yes,enum,R,(as study),Practice,cost table
 cost,1,cost_class,yes,enum,R,establishment_fixed|variable_running|replacement|maintenance|total|project_setup|aggregation_extension|mrv_monitoring|validation_verification|registry_issuance|farmer_payment,"Farm level: establishment_fixed, variable_running, replacement, maintenance (era-aom Fixed/Variable Cost), and total for a reported total cost of the practice (10 §3.4: extracted alongside its components where both are given, never instead of them; set author_computed). Project level (carbon-project documents): project_setup … farmer_payment. Farm-level rows are the priority; project-level rows are captured when met, not searched for separately",cost table
 cost,1,item,yes,string,R,,"What the figure covers (for example 'biochar production, kiln and labour')",cost table
-cost,1,value,yes,number,R,,As reported,cost table
+cost,1,value,yes,number,C,,"As reported. Required unless the source gives a range, then value_min and value_max instead",cost table
+cost,1,value_min,,number,C,,"Lower end, when the source gives a range (for example 1 in '1-26 person-days'). Leave value empty",cost table
+cost,1,value_max,,number,C,,Upper end of a range. Filled with value_min,cost table
 cost,1,unit_basis,yes,enum,R,per_ha|per_ha_per_season|per_ha_per_year|per_head|per_farm|per_project|per_tonne_input,Denominator,cost table
 cost,1,currency,yes,string,R,ISO 4217,As reported. Not converted,cost table (Chun converts)
 cost,1,price_year,yes,integer,R,,"Year of the prices. If unstated, record publication year and set price_year_basis",cost table
 cost,1,price_year_basis,,enum,R,stated|assumed_publication_year|assumed_data_year,,cost table
 cost,1,labour_included,yes,enum,R,yes|no|unstated,Is labour in the figure?,cost table boundary
-cost,1,labour_days,,number,C,person-days per unit_basis,Required if reported,cost table
+cost,1,labour_days,,number,C,person-days per unit_basis,"Required if reported, unless the source gives a range",cost table
+cost,1,labour_days_min,,number,C,person-days per unit_basis,Lower end when labour is reported as a range. Leave labour_days empty,cost table
+cost,1,labour_days_max,,number,C,person-days per unit_basis,Upper end of a labour range,cost table
 cost,1,labour_rate,,string,C,"value, currency, basis","Rate used and its basis (market wage, opportunity cost, minimum wage)",cost table boundary
 cost,1,family_labour_costed,yes,enum,R,yes|no|unstated,Is family labour valued?,cost table boundary
 cost,1,inputs_included,,enum,R,yes|no|unstated,Materials and inputs,cost table boundary
