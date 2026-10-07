@@ -106,6 +106,12 @@ FILE_KEYWORDS_XLSX   <- file.path(DIR_SYNTHESIS, "key-words.xlsx")
 # already screened, which step 1 checks new search results against.
 FILE_WB2022 <- file.path(DIR_DATA, "wb_nbs_extraction_2022.xlsx")
 
+# The 2022 extraction cleaned for CC4A by R/00_prep/clean_wb2022.R: every
+# extractor's sheet combined, practices mapped to CC4A practices with
+# catalogues/map_wb2022_practices.csv, and filtered to rows with one.
+FILE_WB2022_CC4A <- file.path(DIR_DATA, "wb_nbs_extraction_2022_cc4a.xlsx")
+FILE_MAP_WB2022  <- file.path(DIR_CATALOGUES, "map_wb2022_practices.csv")
+
 # The extraction schema, the one definition of every table and field, and
 # the Excel template built from it by R/00_shared/build_template.R. Both are
 # part of the protocol, so they live in docs/synthesis/ rather than here.
