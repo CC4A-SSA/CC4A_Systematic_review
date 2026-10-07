@@ -22,11 +22,15 @@
 #        --refresh        rerun searches already completed in the log
 #        --from-year=     override YEAR_MIN from paths.R
 #        --to-year=       override YEAR_MAX from paths.R
+#        --tables-only    rebuild the record file and the tables from records
+#                         already downloaded. No request is sent to OpenAlex, so
+#                         the search stays as it was on the day it was run
 #
 # Run with:
 #   Rscript R/01_search/openalex_search.R --dry
 #   Rscript R/01_search/openalex_search.R --practice=water_management --limit=200
 #   Rscript R/01_search/openalex_search.R
+#   Rscript R/01_search/openalex_search.R --tables-only
 
 root <- rprojroot::find_root(rprojroot::has_file("CC4A.Rproj"))
 source(file.path(root, "R/00_shared/paths.R"))
@@ -240,8 +244,9 @@ match_wb <- function(raw, refs) {
     dplyr::summarise(
       found_by   = paste(sort(unique(search_id)), collapse = "; "),
       n_searches = dplyr::n_distinct(search_id),
-      dplyr::across(c(doi, title, publication_year, journal, authors, type,
-                      is_oa, oa_url), dplyr::first),
+      dplyr::across(c(doi, title, abstract, publication_year, journal, authors,
+                      country_iso2, type, is_oa, oa_url, cited_by_count),
+                    dplyr::first),
       .groups = "drop"
     )
   if (is.null(refs)) {
@@ -304,6 +309,7 @@ write_summary <- function(counts, by_search = NULL, per_practice = NULL,
 
 flags <- parse_flags()
 dry <- isTRUE(flag(flags, "dry", FALSE))
+tables_only <- isTRUE(flag(flags, "tables-only", FALSE))
 year_from <- as.integer(flag(flags, "from-year", YEAR_MIN))
 year_to <- as.integer(flag(flags, "to-year", YEAR_MAX))
 limit <- flag(flags, "limit", NULL)
@@ -331,6 +337,15 @@ log_msg(nrow(searches), " searches: ", length(unique(searches$practice_group)),
         " practices x ", length(unique(searches$outcome)), " outcomes, ",
         year_from, "-", year_to)
 
+if (tables_only) {
+  counts <- read_csv_safe(FILE_SEARCH_COUNTS)
+  if (!nrow(counts)) stop("--tables-only needs ", FILE_SEARCH_COUNTS, " from an earlier run")
+  counts <- counts[counts$search_id %in% all_ids, ]
+  counts$hits <- as.integer(counts$hits)
+  counts <- counts[order(match(counts$search_id, all_ids)), ]
+  log_msg("tables only: no requests sent; using counts and records already downloaded")
+} else {
+
 # Hits for every search. Cheap: one request each.
 searches$hits <- NA_integer_
 for (i in seq_len(nrow(searches))) {
@@ -355,6 +370,7 @@ if (nrow(old)) {
 counts$hits <- as.integer(counts$hits)
 counts <- counts[order(match(counts$search_id, all_ids)), ]
 write_csv_safe(counts, FILE_SEARCH_COUNTS)
+}
 
 if (dry) {
   write_summary(counts, blocks = blocks)
@@ -370,7 +386,7 @@ log_tbl <- read_csv_safe(FILE_SEARCH_LOG)
 done <- if (nrow(log_tbl)) log_tbl$search_id[log_tbl$status == "complete"] else character()
 refresh <- isTRUE(flag(flags, "refresh", FALSE))
 
-for (i in seq_len(nrow(searches))) {
+for (i in seq_len(if (tables_only) 0L else nrow(searches))) {
   s <- searches[i, ]
   if (s$search_id %in% done && !refresh) {
     log_msg(s$search_id, ": already downloaded, skipped (use --refresh to rerun)")
