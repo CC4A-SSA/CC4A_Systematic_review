@@ -22,6 +22,15 @@ DIR_CATALOGUES <- file.path(CC4A_ROOT, "catalogues")
 DIR_DOCS       <- file.path(CC4A_ROOT, "docs")
 DIR_SYNTHESIS  <- file.path(DIR_DOCS, "synthesis")
 
+# Data files that are not ours to publish (the 2022 World Bank NbS
+# extraction). The folder is not committed; point CC4A_DATA_DIR elsewhere if
+# the files live on a shared drive.
+DIR_DATA <- if (nzchar(Sys.getenv("CC4A_DATA_DIR"))) {
+  Sys.getenv("CC4A_DATA_DIR")
+} else {
+  file.path(CC4A_ROOT, "data")
+}
+
 # Everything the pipeline produces. Git ignored and safe to delete, because
 # the scripts regenerate it. Redirect it with CC4A_OUT_DIR if you want runs
 # on a shared drive.
@@ -54,6 +63,9 @@ CC4A_DIRS <- c(
 # Step 1 search
 FILE_SEARCH_RAW    <- file.path(DIR_CATALOGUES, "search_raw.csv")
 FILE_SEARCH_LOG    <- file.path(DIR_SEARCH, "search_log.csv")
+FILE_SEARCH_COUNTS <- file.path(DIR_SEARCH, "search_counts.csv")
+FILE_SEARCH_MATCHED <- file.path(DIR_SEARCH, "search_records_vs_wb2022.csv")
+FILE_SEARCH_SUMMARY <- file.path(DIR_SEARCH, "search_summary.xlsx")
 
 # Step 2 dedup
 FILE_DEDUP_CLEAN   <- file.path(DIR_DEDUP, "records_deduped.csv")
@@ -85,6 +97,14 @@ FILE_COST_REPORT   <- file.path(DIR_PUBLISH, "cost_report.csv")
 FILE_VOCAB_PRACTICES <- file.path(DIR_CATALOGUES, "vocab_practices.csv")
 FILE_VOCAB_UNITS     <- file.path(DIR_CATALOGUES, "vocab_units.csv")
 FILE_KEYWORDS        <- file.path(DIR_CATALOGUES, "keyword_list.R")
+
+# The OpenAlex search terms: one row per practice, outcome or geography block,
+# with the boolean string in the keyword column. Read by step 1.
+FILE_KEYWORDS_XLSX   <- file.path(DIR_SYNTHESIS, "key-words.xlsx")
+
+# The 2022 World Bank NbS extraction. Its Refs sheet lists the references
+# already screened, which step 1 checks new search results against.
+FILE_WB2022 <- file.path(DIR_DATA, "wb_nbs_extraction_2022.xlsx")
 
 # The extraction schema, the one definition of every table and field, and
 # the Excel template built from it by R/00_shared/build_template.R. Both are
