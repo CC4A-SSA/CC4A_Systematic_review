@@ -311,6 +311,7 @@ if (!is.null(limit)) limit <- as.integer(limit)
 log_step("Step 1: OpenAlex search")
 blocks <- read_blocks()
 searches <- build_searches(blocks)
+all_ids <- searches$search_id   # every search in the key-words file, in order
 
 if (!is.null(flag(flags, "practice"))) {
   keep <- trimws(strsplit(flag(flags, "practice"), ",")[[1]])
@@ -340,6 +341,18 @@ counts <- searches
 counts$year_from <- year_from
 counts$year_to <- year_to
 counts$counted_on <- as.character(Sys.Date())
+
+# A run narrowed with --practice or --outcome updates its own rows and keeps
+# the counts of every other search, so the tables always cover the whole
+# key-words file. Searches no longer in the file are dropped.
+old <- read_csv_safe(FILE_SEARCH_COUNTS)
+if (nrow(old)) {
+  old <- old[!old$search_id %in% counts$search_id & old$search_id %in% all_ids, ]
+  counts <- dplyr::bind_rows(dplyr::mutate(old, dplyr::across(dplyr::everything(), as.character)),
+                             dplyr::mutate(counts, dplyr::across(dplyr::everything(), as.character)))
+}
+counts$hits <- as.integer(counts$hits)
+counts <- counts[order(match(counts$search_id, all_ids)), ]
 write_csv_safe(counts, FILE_SEARCH_COUNTS)
 
 if (dry) {
@@ -395,7 +408,7 @@ for (i in seq_len(nrow(searches))) {
 
 # Check every record against the 2022 references and build the tables.
 raw <- read_csv_safe(FILE_SEARCH_RAW)
-raw <- raw[raw$search_id %in% searches$search_id, ]
+raw <- raw[raw$search_id %in% all_ids, ]
 refs <- read_wb_refs()
 records <- match_wb(raw, refs)
 write_csv_safe(records, FILE_SEARCH_MATCHED)
@@ -422,7 +435,8 @@ per_practice <- dplyr::left_join(raw[, c("practice_group", "record_id")],
                    new = unique_records - in_wb2022, .groups = "drop")
 
 totals <- tibble::tibble(
-  searches_run = nrow(searches),
+  searches_in_file = length(all_ids),
+  searches_downloaded = dplyr::n_distinct(raw$search_id),
   record_rows = nrow(raw),
   unique_records = nrow(records),
   in_wb2022 = sum(records$in_wb2022, na.rm = TRUE),

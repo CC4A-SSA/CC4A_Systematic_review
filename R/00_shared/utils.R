@@ -65,6 +65,11 @@ flag <- function(flags, name, default = NULL) {
 
 # ---- http --------------------------------------------------------------
 
+# The longest wait a retry will sit through. Longer than this and the request
+# stops with the server's message instead (a spent daily budget, not a busy
+# moment).
+MAX_RETRY_WAIT_SECONDS <- 60
+
 #' Fetch a URL politely. One place for the delay between calls, the retry on
 #' a 429 or a 5xx, the user agent, and the contact email the APIs ask for.
 #' @param url the address
@@ -83,7 +88,18 @@ fetch_polite <- function(url, ..., max_tries = 4) {
     httr2::req_user_agent(agent) |>
     httr2::req_retry(
       max_tries = max_tries,
-      is_transient = function(resp) httr2::resp_status(resp) %in% c(429, 500, 502, 503, 504),
+      # A 429 is worth retrying only when the server asks for a short wait.
+      # A long Retry-After means a daily budget is spent: waiting hours in a
+      # retry loop helps nobody, so the response comes back and is stopped
+      # on below.
+      is_transient = function(resp) {
+        status <- httr2::resp_status(resp)
+        if (status == 429) {
+          wait <- suppressWarnings(as.numeric(httr2::resp_header(resp, "Retry-After")))
+          return(is.na(wait) || wait <= MAX_RETRY_WAIT_SECONDS)
+        }
+        status %in% c(500, 502, 503, 504)
+      },
       backoff = function(i) 2^i
     ) |>
     httr2::req_error(is_error = function(resp) FALSE)
@@ -92,6 +108,12 @@ fetch_polite <- function(url, ..., max_tries = 4) {
     NULL
   })
   if (is.null(resp)) return(NULL)
+  if (httr2::resp_status(resp) == 429) {
+    body <- tryCatch(httr2::resp_body_json(resp), error = function(e) list())
+    stop("Rate limit reached and the server asks to wait ",
+         httr2::resp_header(resp, "Retry-After"), " seconds. ",
+         body$message %||% "", call. = FALSE)
+  }
   if (httr2::resp_status(resp) >= 400) {
     log_msg("HTTP ", httr2::resp_status(resp), " for ", url, level = "warn")
     return(NULL)
