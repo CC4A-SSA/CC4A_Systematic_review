@@ -88,7 +88,7 @@ driver and benefit sharing rows need no season classification.
 
 | Step | Folder | What happens |
 |---|---|---|
-| 1 | `R/01_search` | Keyword blocks are crossed into queries and sent to the OpenAlex works API. Africa and the publication window are filtered on the server, so only a plausible result set is ever downloaded. Each row remembers which query found it. |
+| 1 | `R/01_search` | Each practice in `docs/synthesis/key-words.xlsx` is searched once per outcome block (practice AND geography AND outcome), in titles and abstracts, inside the publication window. Hits are counted for every combination, records downloaded, and each record checked against the references already screened in the 2022 World Bank NbS extraction. Each row remembers which search found it. |
 | 2 | `R/02_dedup` | The result set collapses to one row per study. DOIs settle most of it; a fuzzy title comparison catches the rest. Rows that lose are not deleted, they are registered with the reason. |
 | 3 | `R/03_screen` | A model reads title and abstract and answers whether the study is worth downloading: does it carry a number, is the subject an adaptation practice, is it set in Africa, is it inside the window. Code then audits the answer and sends the doubtful cases to a person. |
 | 4 | `R/04_fetch` | Full text, chased through Unpaywall, then the DOI, then the publisher. Downloads are inspected before they are trusted, because a login page saved as a PDF is still a PDF. |
@@ -144,7 +144,7 @@ inside the clone.
 
 | Script | What it is |
 |---|---|
-| `openalex_search.R` | Assembles queries from `catalogues/keyword_list.R`, sends them with the Africa and year filters applied server side, walks the results with a cursor, rebuilds each abstract from the inverted index OpenAlex returns, and records the query alongside every row. Picks up where it left off. `--block=` runs a single outcome block, `--limit=` keeps a trial small, `--dry` shows the queries and their expected yield without fetching. |
+| `openalex_search.R` | Reads the search blocks from `docs/synthesis/key-words.xlsx` (one geography row, outcome rows `outcome1`, `outcome2` ..., one row per practice) and runs practice AND geography AND outcome for every practice and outcome, matched in titles and abstracts with the year window applied server side. Quotes any multi-word term left bare, because OpenAlex reads bare words separately (`carbon credit OR ...` matched 4.6 million works). Walks results with a cursor, rebuilds each abstract, and checks every record against the `Refs` sheet of the 2022 World Bank extraction by DOI, then by title. Writes `outputs/01_search/search_summary.xlsx`: hits and new records per practice x outcome. Picks up where it left off. `--dry` counts hits without downloading, `--practice=` and `--outcome=` narrow the run, `--skip-flagged` drops practices flagged NOT MOVING FORWARD, `--limit=` keeps a trial small. |
 
 ### R/02_dedup
 

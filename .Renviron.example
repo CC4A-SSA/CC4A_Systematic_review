@@ -15,6 +15,13 @@ UNPAYWALL_EMAIL=
 # name a contact address (the polite pool).
 OPENALEX_EMAIL=
 
+# Optional. An OpenAlex API key, if you have one, raises the daily limit.
+OPENALEX_API_KEY=
+
+# Optional. Where the data that is not committed lives (the 2022 World Bank
+# NbS extraction). Defaults to data/ in the repo.
+CC4A_DATA_DIR=
+
 # Optional. Override the model each step uses. Defaults are set at the top of
 # each script.
 SCREEN_MODEL=

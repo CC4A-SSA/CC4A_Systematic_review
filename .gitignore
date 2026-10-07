@@ -31,3 +31,7 @@ catalogues/search_raw.csv
 # OS files
 .DS_Store
 Thumbs.db
+
+# Data that is not ours to publish (the 2022 World Bank NbS extraction).
+# Keep it local or on a shared drive; see DIR_DATA in R/00_shared/paths.R.
+data/
