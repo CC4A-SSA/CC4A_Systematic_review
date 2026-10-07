@@ -34,8 +34,9 @@ source(file.path(root, "R/00_shared/utils.R"))
 
 OPENALEX_BASE <- "https://api.openalex.org/works"
 
-# OpenAlex returns at most 200 records a page. Raising it does nothing.
-PER_PAGE <- 200
+# OpenAlex returns at most 100 records a page (API reference, 2026). Each
+# page is one request against the daily budget, so the full page is used.
+PER_PAGE <- 100
 
 # Pause between requests. OpenAlex allows 10 a second; this keeps well under.
 PAUSE_SECONDS <- 0.15
@@ -160,7 +161,7 @@ search_filter <- function(query, year_from, year_to) {
 
 count_hits <- function(query, year_from, year_to) {
   res <- openalex_get(list(filter = search_filter(query, year_from, year_to),
-                           `per-page` = 1, select = "id"))
+                           per_page = 1, select = "id"))
   if (is.null(res)) NA_integer_ else as.integer(res$meta$count)
 }
 
@@ -199,7 +200,7 @@ download_search <- function(query, year_from, year_to, limit) {
   n <- 0
   repeat {
     res <- openalex_get(list(filter = search_filter(query, year_from, year_to),
-                             `per-page` = PER_PAGE, cursor = cursor,
+                             per_page = PER_PAGE, cursor = cursor,
                              select = SELECT_FIELDS))
     if (is.null(res)) return(list(rows = dplyr::bind_rows(pages), complete = FALSE))
     if (!length(res$results)) break
