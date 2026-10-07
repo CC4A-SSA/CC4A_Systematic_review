@@ -1,0 +1,32 @@
+wb_column,when,cc4a_practice,fit,note
+reduced_tillage,always,ca_bundle,direct,"No-till, minimum tillage, conservation tillage"
+residue_man/mulch,text:plastic|polythene|polyethylene|film mulch,,excluded,Plastic or film mulch is not soil cover (01 section 2.4)
+residue_man/mulch,flag:reduced_tillage,ca_bundle,direct,Residue retained with reduced tillage is the CA bundle
+residue_man/mulch,always,soil_cover,direct,Mulch or surface residue without a tillage change
+organic_fertilizer,always,nutrient_mgmt_b,direct,"Manure, compost and other organic inputs belong under ISFM"
+intercropping,flag:agroforestry,trees_in_farmlands,partial,Tree-crop intercropping
+intercropping,text:\btrees?\b|agroforest|alley|gliricidia|leucaena|faidherbia|grevillea|gmelina|acacia|calliandra,trees_in_farmlands,partial,Tree-crop intercropping
+intercropping,always,,no_match,Generic crop intercropping is not a project practice
+cover_crop/green_manure/improved_fallow,text:fallow,,excluded,"Improved fallow: reference row only, not taken forward"
+cover_crop/green_manure/improved_fallow,text:green manure|sesbania|dhaincha|crotalaria,nutrient_mgmt_b,partial,Green manure goes under ISFM
+cover_crop/green_manure/improved_fallow,always,soil_cover,partial,Cover crop
+crop_rotation,always,,no_match,No standalone project practice; may sit inside CA or ISFM evidence
+agroforestry,product:cattle|\bcows?\b|dairy|goat|sheep|livestock|milk|beef|calf|calves|heifer|pasture|forage|fodder|\bpigs?\b|poultry|chicken,silvopasture,direct,Trees with livestock
+agroforestry,always,trees_in_farmlands,direct,Cropland agroforestry
+water_harvesting/erosion_control,text:erosion|terrac|bund|contour|ridg|vetiver|grass strip|stone line,soil_cover,partial,Erosion control maps to soil cover
+water_harvesting/erosion_control,always,,no_match,Generic water harvesting is not a project practice
+ipm,always,,no_match,Integrated pest management is outside the project practices
+biochar,always,biochar,direct,Exact match
+livestock_diet,always,feed_mgmt,direct,"Feed quality, supplementation, conserved feed, forage"
+controlled_grazing,always,rotational_grazing,direct,
+improved_pasture,text:fodder|forage|napier|brachiaria|planted,feed_mgmt,partial,Planted fodder or forage
+improved_pasture,always,rotational_grazing,partial,Pasture management
+fetilizer_reduction/optimization,always,nutrient_mgmt_b,partial,Optimisation fits; reduction is not the preferred SSA framing
+fertilizer_controlled_release,always,nutrient_mgmt_b,partial,More specific than the project definition
+water_reduction/optimization,product:rice & text:\bSRI\b|intensification,sri,direct,Irrigated rice
+water_reduction/optimization,product:rice & text:direct seed|\bDSR\b|dry seed|wet seed,dsr,direct,Irrigated rice
+water_reduction/optimization,product:rice,awd,direct,Water reduction in irrigated rice
+water_reduction/optimization,always,,no_match,Generic water efficiency outside rice is too broad
+Other_practices,product:rice & text:direct seed,dsr,needs_review,Direct-seeded rice named in Other_practices
+Other_practices,text:concentrate|energy from,feed_mgmt,needs_review,Livestock diet named in Other_practices
+Other_practices,always,,needs_review,Not matched; check by hand
