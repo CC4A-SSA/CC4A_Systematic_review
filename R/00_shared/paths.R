@@ -22,9 +22,9 @@ DIR_CATALOGUES <- file.path(CC4A_ROOT, "catalogues")
 DIR_DOCS       <- file.path(CC4A_ROOT, "docs")
 DIR_SYNTHESIS  <- file.path(DIR_DOCS, "synthesis")
 
-# Data files that are not ours to publish (the 2022 World Bank NbS
-# extraction). The folder is not committed; point CC4A_DATA_DIR elsewhere if
-# the files live on a shared drive.
+# Input data, committed with the repo (the 2022 World Bank NbS extraction and
+# its cleaned copy). Point CC4A_DATA_DIR elsewhere to read it from another
+# folder.
 DIR_DATA <- if (nzchar(Sys.getenv("CC4A_DATA_DIR"))) {
   Sys.getenv("CC4A_DATA_DIR")
 } else {
@@ -109,6 +109,7 @@ FILE_WB2022 <- file.path(DIR_DATA, "wb_nbs_extraction_2022.xlsx")
 # The 2022 extraction cleaned for CC4A by R/00_prep/clean_wb2022.R: every
 # extractor's sheet combined, practices mapped to CC4A practices with
 # catalogues/map_wb2022_practices.csv, and filtered to rows with one.
+# Committed in data/ alongside the original.
 FILE_WB2022_CC4A <- file.path(DIR_DATA, "wb_nbs_extraction_2022_cc4a.xlsx")
 FILE_MAP_WB2022  <- file.path(DIR_CATALOGUES, "map_wb2022_practices.csv")
 
