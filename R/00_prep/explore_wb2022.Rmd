@@ -29,7 +29,7 @@ Flags: none. Knit in RStudio, or run R/00_prep/render_wb2022_explorer.R.
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,
-                      fig.width = 10, fig.height = 4.5)
+                      fig.width = 10, fig.height = 4.5, out.width = "100%")
 root <- rprojroot::find_root(rprojroot::has_file("CC4A.Rproj"))
 source(file.path(root, "R/00_shared/paths.R"))
 suppressPackageStartupMessages({
@@ -175,7 +175,7 @@ by_country <- af |>
   group_by(country) |>
   summarise(studies = n_distinct(StudyID), observations = n(), .groups = "drop")
 plot_ly(by_country, type = "choropleth", locations = ~country, locationmode = "country names",
-        z = ~studies, colorscale = "Blues", height = 480,
+        z = ~studies, colorscale = "Blues", reversescale = TRUE, height = 480,
         text = ~paste0(country, ": ", studies, " studies, ", observations, " observations"),
         hoverinfo = "text", colorbar = list(title = "Studies", x = 0.85, len = 0.6)) |>
   layout(title = list(text = "Studies by country", x = 0),
@@ -320,6 +320,17 @@ pts <- bind_rows(trt_pts, con_pts) |>
   arrange(Outcome, paper, line, x) |>
   select(arm_where, role, when, value, unit, items, everything())
 
+# The paper picker shows how many years each paper's cost and return data
+# cover, and lists the papers with the most years first.
+paper_years <- money |>
+  group_by(paper) |>
+  summarise(years = length(unique(unlist(years))), .groups = "drop") |>
+  mutate(paper_label = paste0("[", years, " yr] ", paper)) |>
+  arrange(desc(years), paper)
+pts <- pts |>
+  left_join(select(paper_years, paper, paper_label), by = "paper") |>
+  mutate(paper_label = factor(paper_label, levels = paper_years$paper_label))
+
 sd_pts <- SharedData$new(pts, key = ~paste(Outcome, line, x, value), group = "points")
 
 # Open on the default outcome and the paper with the most separate time points for it.
@@ -328,12 +339,13 @@ default_paper <- paper_outcome |>
   arrange(desc(time_points), desc(years_covered)) |>
   pull(paper) |>
   first()
+default_paper <- paper_years$paper_label[paper_years$paper == default_paper]
 
 htmltools::tagList(
   bscols(
     widths = c(4, 8),
     filter_select("pt_outcome", "Outcome", sd_pts, ~Outcome, multiple = FALSE),
-    filter_select("pt_paper", "Paper", sd_pts, ~paper, multiple = FALSE)
+    filter_select("pt_paper", "Paper (years of data)", sd_pts, ~paper_label, multiple = FALSE)
   ),
   plot_ly(sd_pts, x = ~x, y = ~value, split = ~line, color = ~role,
           colors = c(Treatment = COL_TREATMENT, Control = COL_CONTROL),
@@ -348,7 +360,7 @@ htmltools::tagList(
            margin = list(t = 20)),
   datatable(sd_pts, rownames = FALSE, class = "compact stripe hover", width = "100%",
             colnames = setNames(c("arm_where", "role", "when", "value", "unit", "items"),
-                                c("Arm", "Role", "Year or season", "Value", "Unit",
+                                c("Treatment / control", "Role", "Year or season", "Value", "Unit",
                                   "Cost items included")),
             options = list(pageLength = 10, dom = "tip",
                            columnDefs = list(list(visible = FALSE,
@@ -377,20 +389,39 @@ window.addEventListener("load", function () {
             jsonlite::toJSON(default_paper, auto_unbox = TRUE)))
 ```
 
-## All rows
+## What the costs include
 
-Every African cost and return observation, for checking or download.
+For each cost item, how many papers' cost figures include it, leave it out, or do not say, across all cost outcomes (variable, total, labour ...). A paper counts as including an item when any of its cost figures does. Costs that leave out labour or land are not comparable with costs that include them.
 
-```{r explorer}
-datatable(money |>
-            transmute(StudyID, Title, Country, Practices = practices, Site = Site_Name, Product,
-                      Outcome, Treatment = Treatment_Name, Control = Control_Name, Unit = unit,
-                      `Value (treatment)` = value_trt, `Value (control)` = value_con,
-                      `Year as recorded` = Measurement_Year, `Years covered` = n_years,
-                      `Cost items` = items, Location = Value_Loc, DOI, Extractor = extractor),
-          rownames = FALSE, filter = "top", extensions = "Buttons", class = "compact stripe",
-          options = list(pageLength = 10, scrollX = TRUE, dom = "Bfrtip",
-                         buttons = c("copy", "csv", "excel")))
+```{r cost-items}
+cost_items <- money |>
+  filter(Outcome %in% COST_OUTCOMES) |>
+  select(StudyID, all_of(COST_ITEMS)) |>
+  pivot_longer(all_of(COST_ITEMS), names_to = "item", values_to = "flag") |>
+  group_by(StudyID, item) |>
+  summarise(status = case_when(any(grepl("^[(]?yes", flag, ignore.case = TRUE)) ~ "Included",
+                               any(grepl("^no", flag, ignore.case = TRUE)) ~ "Not included",
+                               TRUE ~ "Not recorded"),
+            .groups = "drop") |>
+  count(item, status) |>
+  mutate(item = unname(setNames(COST_ITEM_SHORT, COST_ITEMS)[item]),
+         status = factor(status, levels = c("Included", "Not included", "Not recorded")))
+item_order <- cost_items |>
+  filter(status == "Included") |>
+  arrange(n) |>
+  pull(item)
+item_order <- c(setdiff(unique(cost_items$item), item_order), item_order)
+n_cost_papers <- n_distinct(money$StudyID[money$Outcome %in% COST_OUTCOMES])
+
+plot_ly(cost_items, y = ~factor(item, levels = item_order), x = ~n, color = ~status,
+        colors = c("Included" = "#1f6fb4", "Not included" = "#fdae61", "Not recorded" = "#d9d9d9"),
+        type = "bar", orientation = "h", height = 380,
+        text = ~paste0(item, ": ", n, " paper(s), ", tolower(status)),
+        hoverinfo = "text", textposition = "none") |>
+  layout(barmode = "stack",
+         title = list(text = paste0("Cost items in the ", n_cost_papers, " papers reporting costs"), x = 0),
+         xaxis = list(title = "Papers"), yaxis = list(title = ""),
+         legend = list(orientation = "h", y = -0.2))
 ```
 
 ---
