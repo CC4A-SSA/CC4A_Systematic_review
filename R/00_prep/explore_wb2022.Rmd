@@ -1,0 +1,402 @@
+---
+title: "2022 World Bank NbS extraction: explorer for CC4A"
+subtitle: "Economic outcomes of CC4A practices, by place and over time"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    code_folding: hide
+    theme:
+      version: 5
+      bootswatch: flatly
+    self_contained: true
+---
+
+<!--
+What it does: An interactive report on the 2022 World Bank NbS extraction,
+  cleaned for CC4A: how many studies report each economic outcome, where and
+  in which years, how practice costs and returns compare with their controls
+  over time, and a searchable table of every row.
+Reads: data/wb_nbs_extraction_2022_cc4a.xlsx  (sheets extracted_cc4a, orig_Refs)
+Writes: the rendered HTML, docs/reports/wb2022_explorer.html when built with
+  R/00_prep/render_wb2022_explorer.R
+Flags: none. Knit in RStudio, or run R/00_prep/render_wb2022_explorer.R.
+-->
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,
+                      fig.width = 10, fig.height = 5.5)
+root <- rprojroot::find_root(rprojroot::has_file("CC4A.Rproj"))
+source(file.path(root, "R/00_shared/paths.R"))
+suppressPackageStartupMessages({
+  library(dplyr)
+  library(tidyr)
+  library(plotly)
+  library(crosstalk)
+  library(DT)
+})
+
+# Outcomes grouped for reading. Ratios and rates are kept apart from money
+# values because they have no currency.
+OUTCOME_GROUPS <- list(
+  "Cost"   = c("Variable Cost", "Total Cost", "Total Cost (Unconfirmed)", "Labour Cost",
+               "Variable Cost per Asset", "Variable Cost per Unit Product",
+               "Total Cost per Asset", "Total Cost per Unit Product",
+               "Labour Cost per Asset", "Labour Cost per Unit Product",
+               "Present Value of Cost"),
+  "Return" = c("Gross Return", "Net Return", "Net Return (Unconfirmed)", "Gross Margin",
+               "Returns to Labour", "Return to Labour", "Present Value of Benefit"),
+  "Ratio or rate" = c("Net Present Value", "Internal Rate of Return", "Marginal Rate of Return",
+                      "Payback Period")
+)
+
+# Trend lines are fitted only where there is enough to fit: at least this many
+# studies and distinct years for a practice x outcome.
+MIN_STUDIES_FOR_TREND <- 3
+MIN_YEARS_FOR_TREND <- 3
+
+# The % difference plot opens on this range; zoom or autoscale to see the rest.
+PCT_DEFAULT_RANGE <- c(-100, 300)
+
+# Cost item columns: yes/no flags for what a cost figure includes.
+COST_ITEMS <- c("Seeds", "Nutrient Inputs", "Labour", "Pest Control Inputs", "Land (rent)",
+                "Equipment Costs", "Tax", "Transport", "Irrigation")
+
+PRACTICE_LABELS <- c(
+  awd = "AWD (irrigated rice)", biochar = "Biochar", ca_bundle = "Reduced tillage / CA",
+  dsr = "Direct-seeded rice", feed_mgmt = "Feed management",
+  nutrient_mgmt_b = "Nutrient management / ISFM", rotational_grazing = "Rotational grazing",
+  silvopasture = "Silvopasture", soil_cover = "Soil cover", sri = "SRI",
+  trees_in_farmlands = "Trees in farmlands"
+)
+```
+
+```{r data}
+raw <- readxl::read_excel(FILE_WB2022_CC4A, sheet = "extracted_cc4a", col_types = "text")
+
+# Publication year of each study, the fallback where no measurement year is given.
+refs <- readxl::read_excel(FILE_WB2022_CC4A, sheet = "orig_Refs", col_types = "text")
+pub_year <- setNames(suppressWarnings(as.integer(refs$citation_pub_year)), refs$ID)
+
+#' Years a measurement covers. The column mixes formats: 2017; lists such as
+#' 2017.2018; seasons such as 2018.1 or 2018.2.2019.2; ranges such as
+#' 2009-2019; and Excel damage such as 2016.2017000000001 or 2009.201
+#' (2009.2010 with its trailing zero dropped).
+parse_years <- function(s) {
+  s <- trimws(s)
+  if (is.na(s) || !grepl("(19|20)[0-9]{2}", s)) return(integer())
+  if (grepl("^[0-9]{4} *- *[0-9]{4}$", s)) {
+    r <- as.integer(strsplit(s, " *- *")[[1]])
+    return(seq(min(r), max(r)))
+  }
+  if (grepl("^[0-9]{4}\\.[0-9]{9,}$", s)) {
+    second <- round(as.numeric(paste0("0.", substring(s, 6))) * 1e4)
+    return(unique(c(as.integer(substr(s, 1, 4)), as.integer(second))))
+  }
+  if (grepl("^[0-9]{4}\\.[0-9]{3}$", s)) {
+    return(unique(c(as.integer(substr(s, 1, 4)), as.integer(paste0(substring(s, 6), "0")))))
+  }
+  tok <- strsplit(s, "[.;,/ ]+")[[1]]
+  unique(as.integer(tok[grepl("^(19|20)[0-9]{2}$", tok)]))
+}
+
+#' TRUE where any country named in the cell is in Africa ("Bangladesh/India/
+#' Nepal" names three). Looked up once per distinct cell.
+is_africa <- function(country) {
+  cells <- unique(ifelse(is.na(country), "", country))
+  hit <- vapply(strsplit(cells, "[/;,]"), function(p) {
+    cont <- suppressWarnings(countrycode::countrycode(trimws(p), "country.name", "continent"))
+    any(cont %in% "Africa", na.rm = TRUE)
+  }, TRUE)
+  unname(setNames(hit, cells)[ifelse(is.na(country), "", country)])
+}
+
+group_of <- function(outcome) {
+  g <- rep("Ratio or rate", length(outcome))
+  for (n in names(OUTCOME_GROUPS)) g[outcome %in% OUTCOME_GROUPS[[n]]] <- n
+  g[grepl("Ratio", outcome)] <- "Ratio or rate"
+  g
+}
+
+years <- lapply(raw$Measurement_Year, parse_years)
+obs <- raw |>
+  mutate(
+    obs_id = row_number(),
+    year_from_paper = lengths(years) > 0,
+    years = years,
+    year_first = vapply(years, function(y) if (length(y)) min(y) else NA_integer_, 1L),
+    year_last  = vapply(years, function(y) if (length(y)) max(y) else NA_integer_, 1L),
+    n_years    = lengths(years),
+    pub_year   = unname(pub_year[StudyID]),
+    year_first = ifelse(is.na(year_first), pub_year, year_first),
+    year_basis = ifelse(year_from_paper, "measurement year", "publication year (no measurement year)"),
+    region     = ifelse(is_africa(Country), "Africa", "Rest of world"),
+    outcome_group = group_of(Outcome),
+    unit       = trimws(Outcome_Unit),
+    value_trt  = suppressWarnings(as.numeric(Value_Trt)),
+    value_con  = suppressWarnings(as.numeric(Value_Con)),
+    pct_diff   = ifelse(!is.na(value_con) & value_con != 0,
+                        100 * (value_trt - value_con) / abs(value_con), NA_real_),
+    short_title = substr(Title, 1, 90)
+  )
+
+# One row per observation and CC4A practice: a row coded to two practices
+# appears under each.
+long <- obs |>
+  mutate(practice = strsplit(cc4a_practices, "; ")) |>
+  unnest(practice) |>
+  mutate(practice_label = unname(PRACTICE_LABELS[practice]),
+         practice_label = ifelse(is.na(practice_label), practice, practice_label))
+
+n_studies <- n_distinct(obs$StudyID)
+n_africa <- n_distinct(obs$StudyID[obs$region == "Africa"])
+```
+
+## About this data
+
+This report explores **`r format(nrow(obs), big.mark = ",")` extracted observations from `r n_studies` studies** in the 2022 World Bank NbS extraction, kept because they test at least one CC4A practice (`R/00_prep/clean_wb2022.R`). **`r n_africa` of the studies are in Africa**; the rest are from other low and middle income countries, which the region filters separate.
+
+Read the numbers with four things in mind.
+
+- **Money values are in each study's own currency and price year.** USD per hectare is the largest group (`r format(sum(obs$unit == "USD/ha", na.rm = TRUE), big.mark = ",")` rows); INR, ETB, CNY and others make up the rest. They are not converted here (that is Chun's step), so raw values are only compared within one unit.
+- **The % difference from the control has no unit**, so it compares across currencies: (practice − control) / control × 100. It is the fairest single view of whether a practice costs or earns more than the system it replaces.
+- **Years** are the measurement years the extractors recorded, parsed from several formats (lists, seasons, ranges). Where none was given (`r sum(!obs$year_from_paper)` rows), the paper's publication year stands in and is flagged.
+- **Practices** come from the mapping in `catalogues/map_wb2022_practices.csv`; a row mapped to two practices counts under each. `cc4a_fit` says how clean the mapping is.
+
+## Coverage at a glance
+
+```{r coverage}
+cov <- long |>
+  group_by(practice_label, Outcome) |>
+  summarise(studies = n_distinct(StudyID), .groups = "drop")
+top_outcomes <- long |> count(Outcome, sort = TRUE) |> slice_head(n = 15) |> pull(Outcome)
+cov <- cov |> filter(Outcome %in% top_outcomes) |>
+  complete(practice_label, Outcome = top_outcomes, fill = list(studies = 0))
+plot_ly(cov, x = ~Outcome, y = ~practice_label, z = ~studies, type = "heatmap",
+        colors = c("#f7fbff", "#08306b"),
+        text = ~paste0(practice_label, "<br>", Outcome, "<br>", studies, " studies"),
+        hoverinfo = "text") |>
+  add_annotations(x = ~Outcome, y = ~practice_label, text = ~ifelse(studies > 0, studies, ""),
+                  showarrow = FALSE, font = list(size = 10)) |>
+  layout(title = "Studies per practice and outcome (15 most common outcomes)",
+         xaxis = list(title = "", tickangle = -40), yaxis = list(title = ""),
+         margin = list(b = 140, l = 180))
+```
+
+## Where the studies are
+
+```{r map}
+by_country <- obs |>
+  mutate(country = strsplit(Country, "[/;,] *")) |>
+  unnest(country) |>
+  mutate(country = trimws(country)) |>
+  group_by(country) |>
+  summarise(studies = n_distinct(StudyID), observations = n(), .groups = "drop")
+plot_ly(by_country, type = "choropleth", locations = ~country, locationmode = "country names",
+        z = ~studies, colorscale = "Blues", reversescale = FALSE,
+        text = ~paste0(country, ": ", studies, " studies, ", observations, " observations"),
+        hoverinfo = "text") |>
+  layout(title = "Studies by country", geo = list(showframe = FALSE, projection = list(type = "natural earth")))
+```
+
+## Over time: how many studies report each outcome
+
+Each study counts once in every year it measured. A two-year trial reporting variable costs adds one to each of its two years. **Pick an outcome first**; with none picked, a study counts once per outcome it reports. Bars are stacked by practice.
+
+```{r time-counts}
+study_years <- long |>
+  select(StudyID, practice_label, Outcome, outcome_group, region, years, year_first) |>
+  mutate(years = Map(function(y, f) if (length(y)) y else f, years, year_first)) |>
+  unnest(years) |>
+  rename(year = years) |>
+  filter(!is.na(year)) |>
+  distinct(StudyID, practice_label, Outcome, outcome_group, region, year)
+
+sd_years <- SharedData$new(study_years, group = "years")
+bscols(
+  widths = c(3, 9),
+  list(
+    filter_select("y_outcome", "Outcome", sd_years, ~Outcome, multiple = FALSE),
+    filter_checkbox("y_group", "Outcome group", sd_years, ~outcome_group, inline = FALSE),
+    filter_checkbox("y_region", "Region", sd_years, ~region, inline = TRUE),
+    filter_select("y_practice", "Practice", sd_years, ~practice_label)
+  ),
+  plot_ly(sd_years, x = ~year, color = ~practice_label, type = "histogram",
+          xbins = list(size = 1)) |>
+    layout(barmode = "stack", title = "Studies reporting the outcome, per year",
+           xaxis = list(title = "Year measured"), yaxis = list(title = "Studies"),
+           legend = list(orientation = "h", y = -0.25))
+)
+```
+
+**Which practices have multi-year evidence.** For each practice and outcome: how many studies, how many measured over two or more years, and the span of years covered. Multi-year studies are the ones that can show change over time within one setting.
+
+```{r multi-year}
+multi <- long |>
+  group_by(practice_label, Outcome) |>
+  summarise(studies = n_distinct(StudyID),
+            studies_multi_year = n_distinct(StudyID[n_years >= 2]),
+            longest_years = max(n_years),
+            first_year = suppressWarnings(min(year_first, na.rm = TRUE)),
+            last_year = suppressWarnings(max(coalesce(year_last, year_first), na.rm = TRUE)),
+            africa_studies = n_distinct(StudyID[region == "Africa"]),
+            .groups = "drop") |>
+  arrange(desc(studies))
+datatable(multi, rownames = FALSE, filter = "top",
+          colnames = c("Practice", "Outcome", "Studies", "Multi-year studies", "Most years in one study",
+                       "First year", "Last year", "Africa studies"),
+          options = list(pageLength = 10, scrollX = TRUE))
+```
+
+## Trends: practice against control, over time
+
+The % difference between the practice and its control in the same study, plotted against the first measurement year. Above zero, the practice costs (or earns) more than the control. Because it has no unit, studies in every currency sit on one axis. The plot opens on −100% to +300%; zoom out, or double-click, to see the extremes.
+
+```{r pct-plot}
+pct <- long |>
+  filter(!is.na(pct_diff), !is.na(year_first), outcome_group != "Ratio or rate") |>
+  mutate(hover = paste0("<b>", short_title, "</b><br>", Country, " | ", Product,
+                        "<br>", Treatment_Name, " vs ", Control_Name,
+                        "<br>", Outcome, ": ", signif(value_trt, 4), " vs ", signif(value_con, 4), " ", unit,
+                        "<br>% difference: ", round(pct_diff), "%",
+                        "<br>Year: ", year_first, " (", year_basis, ")",
+                        "<br>StudyID ", StudyID, ", extractor ", extractor))
+sd_pct <- SharedData$new(pct, group = "pct")
+bscols(
+  widths = c(3, 9),
+  list(
+    filter_select("p_outcome", "Outcome", sd_pct, ~Outcome),
+    filter_checkbox("p_region", "Region", sd_pct, ~region, inline = TRUE),
+    filter_select("p_practice", "Practice", sd_pct, ~practice_label),
+    filter_checkbox("p_fit", "Mapping fit", sd_pct, ~cc4a_fit, inline = TRUE)
+  ),
+  plot_ly(sd_pct, x = ~jitter(year_first, amount = 0.25), y = ~pct_diff, color = ~practice_label,
+          type = "scatter", mode = "markers", text = ~hover, hoverinfo = "text",
+          marker = list(size = 7, opacity = 0.6)) |>
+    layout(title = "Practice vs control: % difference by year",
+           xaxis = list(title = "First measurement year"),
+           yaxis = list(title = "% difference from control", range = PCT_DEFAULT_RANGE,
+                        zeroline = TRUE, zerolinewidth = 2),
+           legend = list(orientation = "h", y = -0.25))
+)
+```
+
+**Fitted trends.** For each practice and outcome with at least `r MIN_STUDIES_FOR_TREND` studies over at least `r MIN_YEARS_FOR_TREND` distinct years: a straight line through the % differences against year. *Slope* is the change in the % difference per year. These are exploratory. Observations from one study are not independent, study sites differ, and a handful of studies can drive a slope. Treat a slope as a pointer to look at, not a projection to use.
+
+```{r trend-table}
+fit_trend <- function(d, y) {
+  d <- d[!is.na(d[[y]]) & is.finite(d[[y]]), ]
+  if (n_distinct(d$StudyID) < MIN_STUDIES_FOR_TREND || n_distinct(d$year_first) < MIN_YEARS_FOR_TREND) {
+    return(NULL)
+  }
+  m <- lm(reformulate("year_first", y), data = d)
+  s <- summary(m)$coefficients
+  tibble(observations = nrow(d), studies = n_distinct(d$StudyID),
+         years = paste(min(d$year_first), max(d$year_first), sep = "-"),
+         median_value = median(d[[y]]),
+         slope_per_year = s["year_first", "Estimate"],
+         slope_se = s["year_first", "Std. Error"],
+         p_value = s["year_first", "Pr(>|t|)"])
+}
+trends_pct <- pct |>
+  group_by(practice_label, Outcome) |>
+  group_modify(~ fit_trend(.x, "pct_diff") %||% tibble()) |>
+  ungroup()
+datatable(trends_pct, rownames = FALSE, filter = "top",
+          colnames = c("Practice", "Outcome", "Observations", "Studies", "Years",
+                       "Median % difference", "Slope (% points per year)", "SE", "p"),
+          options = list(pageLength = 10, scrollX = TRUE)) |>
+  formatRound(c("median_value", "slope_per_year", "slope_se"), 1) |>
+  formatSignif("p_value", 2)
+```
+
+## Trends: values in USD per hectare
+
+Raw values for the rows already reported in **USD/ha**, the one unit large enough to plot on its own. Pick an outcome, for example *Variable Cost*. Hover over a point for the study, treatment and year. Values in other currencies are left out until they are converted to a common currency and base year.
+
+```{r usd-plot}
+usd <- long |>
+  filter(unit == "USD/ha", !is.na(value_trt), !is.na(year_first), outcome_group != "Ratio or rate") |>
+  mutate(hover = paste0("<b>", short_title, "</b><br>", Country, " | ", Product,
+                        "<br>", Treatment_Name, ": ", signif(value_trt, 4), " USD/ha",
+                        "<br>Control ", Control_Name, ": ", signif(value_con, 4), " USD/ha",
+                        "<br>Year: ", year_first, " (", year_basis, ")",
+                        "<br>StudyID ", StudyID))
+sd_usd <- SharedData$new(usd, group = "usd")
+bscols(
+  widths = c(3, 9),
+  list(
+    filter_select("u_outcome", "Outcome", sd_usd, ~Outcome, multiple = FALSE),
+    filter_checkbox("u_region", "Region", sd_usd, ~region, inline = TRUE),
+    filter_select("u_practice", "Practice", sd_usd, ~practice_label)
+  ),
+  plot_ly(sd_usd, x = ~jitter(year_first, amount = 0.25), y = ~value_trt, color = ~practice_label,
+          type = "scatter", mode = "markers", text = ~hover, hoverinfo = "text",
+          marker = list(size = 7, opacity = 0.6)) |>
+    layout(title = "Practice values in USD/ha by year",
+           xaxis = list(title = "First measurement year"),
+           yaxis = list(title = "USD per hectare (as reported)", type = "log"),
+           legend = list(orientation = "h", y = -0.25))
+)
+```
+
+```{r usd-trend-table}
+trends_usd <- usd |>
+  group_by(practice_label, Outcome) |>
+  group_modify(~ fit_trend(.x, "value_trt") %||% tibble()) |>
+  ungroup()
+datatable(trends_usd, rownames = FALSE, filter = "top",
+          caption = "Fitted trends in USD/ha values (exploratory, same caveats as above; prices are nominal, not deflated)",
+          colnames = c("Practice", "Outcome", "Observations", "Studies", "Years",
+                       "Median USD/ha", "Slope (USD/ha per year)", "SE", "p"),
+          options = list(pageLength = 10, scrollX = TRUE)) |>
+  formatRound(c("median_value", "slope_per_year", "slope_se"), 1) |>
+  formatSignif("p_value", 2)
+```
+
+## What the cost figures include
+
+For cost outcomes: the share of observations whose cost figure includes each item, as the extractors recorded it. A cost that leaves out labour or land is not comparable with one that includes them. This is the boundary problem the CC4A cost table records field by field.
+
+```{r cost-items}
+cost_rows <- obs |> filter(outcome_group == "Cost")
+items <- cost_rows |>
+  select(StudyID, all_of(COST_ITEMS)) |>
+  pivot_longer(all_of(COST_ITEMS), names_to = "item", values_to = "included") |>
+  mutate(included = case_when(grepl("^\\(?yes", included, ignore.case = TRUE) ~ "Included",
+                              grepl("^no", included, ignore.case = TRUE) ~ "Not included",
+                              TRUE ~ "Not recorded")) |>
+  count(item, included) |>
+  group_by(item) |> mutate(share = n / sum(n)) |> ungroup()
+plot_ly(items, y = ~item, x = ~share, color = ~included, type = "bar", orientation = "h",
+        colors = c("Included" = "#2c7fb8", "Not included" = "#fdae61", "Not recorded" = "#d9d9d9"),
+        text = ~paste0(item, ": ", included, ", ", n, " observations (", round(100 * share), "%)"),
+        hoverinfo = "text") |>
+  layout(barmode = "stack", title = paste0("Cost items included (", nrow(cost_rows), " cost observations)"),
+         xaxis = list(title = "Share of cost observations", tickformat = ".0%"),
+         yaxis = list(title = ""), legend = list(orientation = "h", y = -0.2))
+```
+
+## Data explorer
+
+Every observation, one row per practice. Filter any column, search across all of them, and download what you see with the buttons.
+
+```{r explorer}
+explorer <- long |>
+  transmute(StudyID, Title, Country, Region = region, Practice = practice_label, Fit = cc4a_fit,
+            Product, Treatment = Treatment_Name, Control = Control_Name, Outcome, Unit = unit,
+            `Value (practice)` = value_trt, `Value (control)` = value_con,
+            `% difference` = round(pct_diff, 1), `Year (first)` = year_first,
+            `Years measured` = n_years, `Year source` = year_basis,
+            `Measurement_Year (raw)` = Measurement_Year, `Discount rate` = Discount_Rate,
+            Location = Value_Loc, DOI, Extractor = extractor)
+datatable(explorer, rownames = FALSE, filter = "top", extensions = "Buttons",
+          options = list(pageLength = 15, scrollX = TRUE, dom = "Bfrtip",
+                         buttons = c("copy", "csv", "excel")))
+```
+
+---
+
+*Built from `data/wb_nbs_extraction_2022_cc4a.xlsx` by `R/00_prep/explore_wb2022.Rmd`. Practice mapping: `catalogues/map_wb2022_practices.csv`.*
