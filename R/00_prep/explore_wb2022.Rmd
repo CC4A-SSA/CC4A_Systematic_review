@@ -311,7 +311,7 @@ pts <- bind_rows(trt_pts, con_pts) |>
                      TRUE ~ as.character(year_first)),
     arm_where = ifelse(nzchar(where), paste0(arm, " (", where, ")"), arm),
     # A pooled value is its own trace, so it is never joined by a line.
-    line = paste(role, arm_where, ifelse(pooled, Measurement_Year, "series"), sep = " :: "),
+    line = paste(role, arm_where, ifelse(pooled, paste(Measurement_Year, value), "series"), sep = " :: "),
     marker_symbol = ifelse(pooled, "Pooled over years", "Single year or season"),
     hover = paste0("<b>", arm_where, "</b> (", tolower(role), " arm)<br>",
                    Outcome, ": ", format(value, big.mark = ","), " ", unit,
@@ -369,24 +369,51 @@ htmltools::tagList(
 ```
 
 ```{r defaults, results = "asis"}
-# crosstalk has no default selection, so the page sets the outcome and paper
-# filters on load; otherwise every outcome and paper is drawn at once.
+# crosstalk has no default selection and does not link one dropdown to
+# another. This script (1) sets the outcome and paper filters on load, so the
+# page does not open with every outcome and paper drawn at once, and (2) keeps
+# the paper dropdown to the papers that report the chosen outcome, most years
+# first, switching to the first of them when the current paper has none.
+papers_by_outcome <- pts |>
+  distinct(Outcome, paper_label) |>
+  mutate(paper_label = as.character(paper_label)) |>
+  arrange(Outcome, match(paper_label, paper_years$paper_label)) |>
+  group_by(Outcome) |>
+  summarise(papers = list(paper_label), .groups = "drop")
+papers_by_outcome <- setNames(papers_by_outcome$papers, papers_by_outcome$Outcome)
+
 cat(sprintf('<script>
 window.addEventListener("load", function () {
-  var want = {"#po_outcome": %1$s, "#pt_outcome": %1$s, "#pt_paper": %2$s};
+  var papersByOutcome = %3$s;
   var tries = 0;
-  (function pick() {
-    var done = true;
-    Object.keys(want).forEach(function (id) {
-      var el = document.querySelector(id + " select");
-      if (el && el.selectize) { if (el.selectize.getValue() !== want[id]) el.selectize.setValue(want[id]); }
-      else { done = false; }
-    });
-    if (!done && tries++ < 50) setTimeout(pick, 100);
+  (function setup() {
+    var po = document.querySelector("#po_outcome select");
+    var outcome = document.querySelector("#pt_outcome select");
+    var paper = document.querySelector("#pt_paper select");
+    if (!(po && po.selectize && outcome && outcome.selectize && paper && paper.selectize)) {
+      if (tries++ < 50) setTimeout(setup, 100);
+      return;
+    }
+    var allPapers = Object.assign({}, paper.selectize.options);
+    function limitPapers(chosen) {
+      var sel = paper.selectize;
+      var keep = papersByOutcome[chosen] || Object.keys(allPapers);
+      var current = sel.getValue();
+      sel.clearOptions(true);
+      keep.forEach(function (v) { if (allPapers[v]) sel.addOption(allPapers[v]); });
+      sel.refreshOptions(false);
+      sel.setValue(keep.indexOf(current) >= 0 ? current : keep[0]);
+    }
+    outcome.selectize.on("change", function (v) { limitPapers(v); });
+    po.selectize.setValue(%1$s);
+    outcome.selectize.setValue(%1$s);
+    limitPapers(%1$s);
+    paper.selectize.setValue(%2$s);
   })();
 });
 </script>', jsonlite::toJSON(DEFAULT_OUTCOME, auto_unbox = TRUE),
-            jsonlite::toJSON(default_paper, auto_unbox = TRUE)))
+            jsonlite::toJSON(default_paper, auto_unbox = TRUE),
+            jsonlite::toJSON(papers_by_outcome, auto_unbox = FALSE)))
 ```
 
 ## What the costs include
