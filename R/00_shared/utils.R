@@ -17,11 +17,13 @@
 #' @param level one of "info", "warn", "error", "done"
 log_msg <- function(..., level = "info") {
   msg <- paste0(format(Sys.time(), "%H:%M:%S"), "  ", paste0(...))
+  # Passed as a glue variable, so braces or quotes in the text (an error
+  # message, a title) are printed as they are, not interpreted by cli.
   switch(level,
-    warn  = cli::cli_alert_warning(msg),
-    error = cli::cli_alert_danger(msg),
-    done  = cli::cli_alert_success(msg),
-    cli::cli_alert_info(msg)
+    warn  = cli::cli_alert_warning("{msg}"),
+    error = cli::cli_alert_danger("{msg}"),
+    done  = cli::cli_alert_success("{msg}"),
+    cli::cli_alert_info("{msg}")
   )
   invisible(msg)
 }
@@ -88,6 +90,9 @@ fetch_polite <- function(url, ..., max_tries = 4) {
     httr2::req_user_agent(agent) |>
     httr2::req_retry(
       max_tries = max_tries,
+      # A dropped connection (a reset, a timeout) is retried too, not only an
+      # error status: on a long search one or two always happen.
+      retry_on_failure = TRUE,
       # A 429 is worth retrying only when the server asks for a short wait.
       # A long Retry-After means a daily budget is spent: waiting hours in a
       # retry loop helps nobody, so the response comes back and is stopped
