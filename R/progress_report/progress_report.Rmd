@@ -215,7 +215,10 @@ counts <- read_cols(FILE_SEARCH_COUNTS, c("search_id", "practice_group", "outcom
   mutate(hits = as.integer(hits))
 search_date <- format(as.Date(max(counts$counted_on)), "%d %B %Y")
 
-records <- read_cols(FILE_SEARCH_MATCHED, c("record_id", "doi", "is_oa"))
+records <- read_cols(FILE_SEARCH_MATCHED, c("record_id", "doi", "is_oa", "abstract_source"))
+# Abstracts found beyond OpenAlex and the 2022 refs, by R/01_search/fill_abstracts.R.
+abstracts_found <- sum(!records$abstract_source %in% c("openalex", "wb2022", "none", NA))
+abstracts_none <- sum(records$abstract_source %in% c("none", NA))
 
 # A person's QC decision overrides the model's. Spelling slips ("exlude")
 # are read by their first letters. An exclusion the person confirmed keeps
@@ -280,7 +283,8 @@ steps <- list(
            " unique records")),
   c("3", "Title and abstract screening", "Done, checked by a person",
     paste0(fmt(overall$included), " included, ", fmt(overall$excluded), " excluded, ",
-           fmt(overall$title_only + overall$unsure), " waiting for an abstract")),
+           fmt(overall$title_only), " waiting for an abstract, ", fmt(overall$unsure),
+           " unsure, for a person")),
   c("4", "Full texts through Zotero", "Next", "Fetch the PDFs of the included records"),
   c("5", "Data extraction and QC", "After that", "Extract into the template, then check a sample")
 )
@@ -603,7 +607,7 @@ plot_ly(hit_matrix, x = ~outcome, y = ~practice, z = ~log10(pmax(hits, 1)), type
 
 ## 3. Title and abstract screening
 
-Every record was screened on its title and abstract by a GPT model (gpt-4.1-mini), following the ERA screening workflow. The model answers one question per criterion: is the study in Africa, does it study one of the practices, does it report costs, adoption or carbon income, and what kind of study is it. Code then turns the answers into include, exclude or unsure, so every decision names the criterion that set it. A record with no abstract is never excluded on its title alone (unless it is clearly outside Africa); it waits for an abstract. Papers the 2022 reviewers included were shown to the model as examples.
+Every record was screened on its title and abstract by a GPT model (gpt-4.1-mini), following the ERA screening workflow. The model answers one question per criterion: is the study in Africa, does it study one of the practices, does it report costs, adoption or carbon income, and what kind of study is it. Code then turns the answers into include, exclude or unsure, so every decision names the criterion that set it. A record with no abstract is never excluded on its title alone (unless it is clearly outside Africa); it waits for an abstract. Papers the 2022 reviewers included were shown to the model as examples. OpenAlex holds no abstract for some records; `R/01_search/fill_abstracts.R` found **`r fmt(abstracts_found)`** of them elsewhere (Europe PMC, Semantic Scholar, Crossref and the publishers' own pages), and those records were screened on their abstract. `r fmt(abstracts_none)` still have none, most of them Elsevier papers and SSRN working papers, whose sites refuse automated requests.
 
 ### PRISMA diagram
 

@@ -283,7 +283,8 @@ match_wb <- function(raw, refs) {
   fill <- records$abstract_source == "none" & nzchar(dplyr::coalesce(refs$wb_abstract[hit], ""))
   records$abstract[fill] <- refs$wb_abstract[hit][fill]
   records$abstract_source[fill] <- "wb2022"
-  records
+  # Then the abstracts R/01_search/fill_abstracts.R found elsewhere.
+  apply_found_abstracts(records)
 }
 
 # ---- the tables -----------------------------------------------------------------

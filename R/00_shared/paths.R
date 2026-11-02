@@ -66,6 +66,9 @@ FILE_SEARCH_LOG    <- file.path(DIR_SEARCH, "search_log.csv")
 FILE_SEARCH_COUNTS <- file.path(DIR_SEARCH, "search_counts.csv")
 FILE_SEARCH_MATCHED <- file.path(DIR_SEARCH, "search_records_vs_wb2022.csv")
 FILE_SEARCH_SUMMARY <- file.path(DIR_SEARCH, "search_summary.xlsx")
+# Every abstract lookup R/01_search/fill_abstracts.R has tried, and what it
+# found. Read back by the search, so a new search keeps the abstracts found.
+FILE_ABSTRACT_LOOKUP <- file.path(DIR_SEARCH, "abstract_lookup.csv")
 
 # Step 2 dedup
 FILE_DEDUP_CLEAN   <- file.path(DIR_DEDUP, "records_deduped.csv")

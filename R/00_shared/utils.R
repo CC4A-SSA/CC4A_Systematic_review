@@ -72,20 +72,22 @@ flag <- function(flags, name, default = NULL) {
 # moment).
 MAX_RETRY_WAIT_SECONDS <- 60
 
-#' Fetch a URL politely. One place for the delay between calls, the retry on
-#' a 429 or a 5xx, the user agent, and the contact email the APIs ask for.
+#' Build a polite request without performing it, for callers that send many
+#' at once (httr2::req_perform_parallel) or need a POST body. One place for
+#' the retry on a 429 or a 5xx, the user agent, and the contact email the
+#' APIs ask for. A response with an error status comes back as a response,
+#' not an R error, so the caller decides what it means.
 #' @param url the address
-#' @param ... passed to the underlying request
+#' @param ... query parameters
 #' @param max_tries how many times to retry before giving up
-#' @return the response, or NULL when every try failed
-fetch_polite <- function(url, ..., max_tries = 4) {
+polite_request <- function(url, ..., max_tries = 4) {
   contact <- Sys.getenv("OPENALEX_EMAIL", Sys.getenv("UNPAYWALL_EMAIL"))
   agent <- if (nzchar(contact)) {
     paste0("CC4A evidence synthesis (mailto:", contact, ")")
   } else {
     "CC4A evidence synthesis"
   }
-  req <- httr2::request(url) |>
+  httr2::request(url) |>
     httr2::req_url_query(...) |>
     httr2::req_user_agent(agent) |>
     httr2::req_retry(
@@ -100,7 +102,8 @@ fetch_polite <- function(url, ..., max_tries = 4) {
       is_transient = function(resp) {
         status <- httr2::resp_status(resp)
         if (status == 429) {
-          wait <- suppressWarnings(as.numeric(httr2::resp_header(resp, "Retry-After")))
+          # No Retry-After header (Semantic Scholar sends none) reads as NA.
+          wait <- suppressWarnings(as.numeric(httr2::resp_header(resp, "Retry-After", NA)))
           return(is.na(wait) || wait <= MAX_RETRY_WAIT_SECONDS)
         }
         status %in% c(500, 502, 503, 504)
@@ -108,6 +111,15 @@ fetch_polite <- function(url, ..., max_tries = 4) {
       backoff = function(i) 2^i
     ) |>
     httr2::req_error(is_error = function(resp) FALSE)
+}
+
+#' Fetch a URL politely (see polite_request).
+#' @param url the address
+#' @param ... query parameters
+#' @param max_tries how many times to retry before giving up
+#' @return the response, or NULL when every try failed
+fetch_polite <- function(url, ..., max_tries = 4) {
+  req <- polite_request(url, ..., max_tries = max_tries)
   resp <- tryCatch(httr2::req_perform(req), error = function(e) {
     log_msg("request failed: ", conditionMessage(e), level = "warn")
     NULL
@@ -173,6 +185,23 @@ write_csv_safe <- function(x, path, append = FALSE) {
   dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
   readr::write_csv(x, path, na = "", append = append && file.exists(path))
   invisible(path)
+}
+
+#' Fill the records that have no abstract with the abstracts
+#' R/01_search/fill_abstracts.R found, naming the source in abstract_source.
+#' Records that have one are left alone. Used by that script and by the
+#' search, so a new search keeps what was found.
+#' @param records a data frame with record_id, abstract and abstract_source
+apply_found_abstracts <- function(records) {
+  found <- read_csv_safe(FILE_ABSTRACT_LOOKUP)
+  if (!nrow(found)) return(records)
+  found <- found[found$status == "found", ]
+  found <- found[!duplicated(found$record_id), ]
+  hit <- match(records$record_id, found$record_id)
+  fill <- !nzchar(dplyr::coalesce(records$abstract, "")) & !is.na(hit)
+  records$abstract[fill] <- found$abstract[hit[fill]]
+  records$abstract_source[fill] <- found$source[hit[fill]]
+  records
 }
 
 #' Stamp a run so outputs from different runs never overwrite each other.
