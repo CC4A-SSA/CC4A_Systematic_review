@@ -19,12 +19,15 @@ What it does: The review's progress, step by step, as one interactive page.
   1. The 2022 World Bank NbS extraction, African studies: the scope of the
      data, how many years each paper reports an outcome for, a chosen paper's
      values over its years and seasons, and what its costs include.
-  2. The OpenAlex search: hits per practice and outcome.
-  3. Title and abstract screening: a PRISMA diagram for any practice and
-     outcome, a table per search, and the person's QC of the model.
-  4. Next steps: full texts through Zotero, then extraction and its QC.
+  2. The practices: Pete Steward's practice vocabulary.
+  3. The OpenAlex search: hits per practice and outcome.
+  4. Title and abstract screening: a PRISMA diagram for any practice and
+     outcome, a table per search, and the person's QC of the model. Records
+     with no abstract anywhere are left out for now.
+  5. Next steps: full texts through Zotero, then extraction and its QC.
 Reads: data/wb_nbs_extraction_2022_cc4a.xlsx           (sheet extracted_cc4a)
-       docs/synthesis/key-words.xlsx                    practice names
+       catalogues/vocab_practices.csv                   the practice vocabulary
+       docs/synthesis/key-words.xlsx                    search practice names
        outputs/01_search/search_counts.csv              hits per search
        outputs/01_search/search_records_vs_wb2022.csv   DOI and open access
        outputs/03_screen/screen_scope.csv               decisions and QC
@@ -218,7 +221,6 @@ search_date <- format(as.Date(max(counts$counted_on)), "%d %B %Y")
 records <- read_cols(FILE_SEARCH_MATCHED, c("record_id", "doi", "is_oa", "abstract_source"))
 # Abstracts found beyond OpenAlex and the 2022 refs, by R/01_search/fill_abstracts.R.
 abstracts_found <- sum(!records$abstract_source %in% c("openalex", "wb2022", "none", NA))
-abstracts_none <- sum(records$abstract_source %in% c("none", NA))
 
 # A person's QC decision overrides the model's. Spelling slips ("exlude")
 # are read by their first letters. An exclusion the person confirmed keeps
@@ -242,7 +244,9 @@ screen <- read_cols(FILE_SCREEN, c("record_id", "qc_sample", "qc_decision", "dec
     open_access = is_oa %in% "TRUE",
     has_doi = !is.na(doi),
     wb_africa_included = wb_positive %in% "TRUE" & wb_africa %in% "TRUE"
-  )
+  ) |>
+  # Records with no abstract anywhere are left out of this report for now.
+  filter(group != "title_only")
 
 # One row per record and search that found it.
 screen_long <- screen |>
@@ -279,12 +283,11 @@ steps <- list(
   c("1", "The 2022 World Bank data", "Done",
     paste0(n_distinct(af$StudyID), " African studies with a CC4A practice, cleaned and explored")),
   c("2", "OpenAlex search", "Done",
-    paste0(overall$searches, " searches on ", search_date, ", ", fmt(overall$screened),
+    paste0(overall$searches, " searches on ", search_date, ", ", fmt(nrow(records)),
            " unique records")),
   c("3", "Title and abstract screening", "Done, checked by a person",
     paste0(fmt(overall$included), " included, ", fmt(overall$excluded), " excluded, ",
-           fmt(overall$title_only), " waiting for an abstract, ", fmt(overall$unsure),
-           " unsure, for a person")),
+           fmt(overall$unsure), " unsure, for a person")),
   c("4", "Full texts through Zotero", "Next", "Fetch the PDFs of the included records"),
   c("5", "Data extraction and QC", "After that", "Extract into the template, then check a sample")
 )
@@ -586,9 +589,41 @@ plot_ly(cost_items, y = ~factor(item, levels = item_order), x = ~n, color = ~sta
          legend = list(orientation = "h", y = -0.2))
 ```
 
-## 2. The OpenAlex search
+## 2. The practices
 
-The 2022 data are not enough on their own, so the literature was searched again in OpenAlex on `r search_date`: **`r overall$searches` searches**, one for each of the `r length(PRACTICE_NAMES)` practices and the three outcome blocks (adoption; costs, returns and incentives; carbon finance), each combined with the Africa terms and limited to papers from 1990 to 2026. The search terms are in `docs/synthesis/key-words.xlsx`. Together the searches returned `r fmt(overall$hits)` hits; many papers are found by more than one search, which leaves **`r fmt(overall$screened)` unique records**.
+The review's practice vocabulary, written by Pete Steward (`catalogues/vocab_practices.csv`; the full definitions and rules are in `docs/synthesis/01-practice-definitions.md`). Each practice has a definition, the farming system it applies to, the comparator a study must use, its ERA practice codes, and what does not count as the practice. Extraction records every value against one of these codes. The OpenAlex search below groups its keywords into `r length(PRACTICE_NAMES)` search practices (`docs/synthesis/key-words.xlsx`), which are broader than this list. Click a practice to see its definition; practices not taken forward or out of scope are listed so they can be named as reasons to exclude.
+
+```{r vocabulary, results = "asis"}
+SCOPE_LABELS <- c(in_scope = "In scope", not_taken_forward = "Not taken forward",
+                  out_of_scope = "Out of scope")
+vocab <- readr::read_csv(FILE_VOCAB_PRACTICES, col_types = readr::cols(.default = "c"),
+                         na = "", show_col_types = FALSE)
+esc <- function(x) htmltools::htmlEscape(dplyr::coalesce(x, ""))
+field <- function(name, value) {
+  if (is.na(value) || !nzchar(value)) "" else
+    sprintf('<div class="vfield"><span class="vname">%s</span> %s</div>', name, esc(value))
+}
+for (sc in names(SCOPE_LABELS)) {
+  v <- vocab[vocab$scope == sc, ]
+  cat(sprintf('<h4 class="vgroup">%s (%d)</h4>', SCOPE_LABELS[[sc]], nrow(v)))
+  for (i in seq_len(nrow(v))) {
+    r <- v[i, ]
+    cat(sprintf(
+      '<details class="vpractice"><summary><b>%s</b> <code>%s</code>%s%s</summary>%s%s%s%s%s</details>',
+      esc(r$label), esc(r$practice_code),
+      if (r$pilot %in% "yes") ' <span class="vpilot">Pilot</span>' else "",
+      if (!is.na(r$system)) paste0(' <span class="vsystem">', esc(r$system), "</span>") else "",
+      field("Definition", r$definition), field("Comparator", r$comparator),
+      field("ERA codes", gsub(";", "; ", r$era_codes)),
+      field("Does not count, and bundles", r$notes),
+      field("Crosswalk", r$crosswalk)))
+  }
+}
+```
+
+## 3. The OpenAlex search
+
+The 2022 data are not enough on their own, so the literature was searched again in OpenAlex on `r search_date`: **`r overall$searches` searches**, one for each of the `r length(PRACTICE_NAMES)` practices and the three outcome blocks (adoption; costs, returns and incentives; carbon finance), each combined with the Africa terms and limited to papers from 1990 to 2026. The search terms are in `docs/synthesis/key-words.xlsx`. Together the searches returned `r fmt(overall$hits)` hits; many papers are found by more than one search, which leaves **`r fmt(nrow(records))` unique records**.
 
 ```{r search-heatmap, fig.height = 6}
 hit_matrix <- counts |>
@@ -605,9 +640,9 @@ plot_ly(hit_matrix, x = ~outcome, y = ~practice, z = ~log10(pmax(hits, 1)), type
          margin = list(l = 10, t = 70))
 ```
 
-## 3. Title and abstract screening
+## 4. Title and abstract screening
 
-Every record was screened on its title and abstract by a GPT model (gpt-4.1-mini), following the ERA screening workflow. The model answers one question per criterion: is the study in Africa, does it study one of the practices, does it report costs, adoption or carbon income, and what kind of study is it. Code then turns the answers into include, exclude or unsure, so every decision names the criterion that set it. A record with no abstract is never excluded on its title alone (unless it is clearly outside Africa); it waits for an abstract. Papers the 2022 reviewers included were shown to the model as examples. OpenAlex holds no abstract for some records; `R/01_search/fill_abstracts.R` found **`r fmt(abstracts_found)`** of them elsewhere (Europe PMC, Semantic Scholar, Crossref and the publishers' own pages), and those records were screened on their abstract. `r fmt(abstracts_none)` still have none, most of them Elsevier papers and SSRN working papers, whose sites refuse automated requests.
+Every record was screened on its title and abstract by a GPT model (gpt-4.1-mini), following the ERA screening workflow. The model answers one question per criterion: is the study in Africa, does it study one of the practices, does it report costs, adoption or carbon income, and what kind of study is it. Code then turns the answers into include, exclude or unsure, so every decision names the criterion that set it. Papers the 2022 reviewers included were shown to the model as examples. OpenAlex holds no abstract for some records; `R/01_search/fill_abstracts.R` found **`r fmt(abstracts_found)`** of them elsewhere (Europe PMC, Semantic Scholar, Crossref and the publishers' own pages), and those records were screened on their abstract.
 
 ### PRISMA diagram
 
@@ -672,8 +707,7 @@ cat(sprintf('
   box("&rarr; Found by more than one search, counted once", "duplicates"),
   box("Records screened on title and abstract", "screened"),
   box("&rarr; Excluded", "excluded", exclusion_list),
-  box("&rarr; Waiting: title only, no abstract yet", "title_only",
-      '<div class="pnote" data-hide-zero="unsure">plus <span data-k="unsure"></span> still unsure, for a person</div>'),
+  box("&rarr; Unsure, for a person", "unsure"),
   box("Included for full text", "included",
       '<div class="pnote"><span data-k="included_doi"></span> with a DOI; <span data-k="included_oa"></span> open access in OpenAlex</div>'),
   jsonlite::toJSON(prisma, auto_unbox = TRUE)))
@@ -691,13 +725,13 @@ per_search <- prisma_keys |>
     `OpenAlex hits` = vapply(c, `[[`, 1L, "hits"),
     Screened = vapply(c, `[[`, 1L, "screened"),
     Excluded = vapply(c, `[[`, 1L, "excluded"),
-    `Title only` = vapply(c, function(x) x$title_only + x$unsure, 1L),
+    Unsure = vapply(c, `[[`, 1L, "unsure"),
     Included = vapply(c, `[[`, 1L, "included"),
     `% included` = round(100 * Included / pmax(Screened, 1))
   )
 datatable(per_search, rownames = FALSE, class = "compact stripe hover", width = "100%",
           filter = "top", options = list(pageLength = 15, dom = "tip", order = list(list(6, "desc")))) |>
-  formatRound(c("OpenAlex hits", "Screened", "Excluded", "Title only", "Included"), digits = 0)
+  formatRound(c("OpenAlex hits", "Screened", "Excluded", "Unsure", "Included"), digits = 0)
 ```
 
 ### Checking the model: the person's QC
@@ -728,15 +762,14 @@ wb <- screen |> filter(wb_africa_included)
 - **Includes.** The person kept `r sum(inc$qc == "include")` of the `r nrow(inc)` sampled includes (`r round(100 * mean(inc$qc == "include"))`%). The full-text screen will catch more of the includes that do not hold up.
 - **Excludes.** The person would have kept `r missed` of the `r nrow(exc)` sampled excludes. `r if (missed == 0) paste0("With none in ", nrow(exc), ", the share of relevant papers among all ", fmt(sum(screen$decision == "exclude")), " excludes is, with 95% confidence, below about ", round(300 / nrow(exc)), "%.") else ""`
 - **Unsure.** Of the `r sum(qc_rows$qc_sample == "decide unsure")` unsure records with an abstract, the person included `r sum(qc_rows$qc_sample == "decide unsure" & qc_rows$qc == "include")`.
-- **Against the 2022 reviewers.** The search found `r nrow(wb)` African papers the 2022 reviewers included. The screening keeps `r sum(wb$final != "exclude")` of them (`r round(100 * mean(wb$final != "exclude"))`%) for full text or for an abstract.
+- **Against the 2022 reviewers.** The search found `r nrow(wb)` African papers the 2022 reviewers included. The screening keeps `r sum(wb$final != "exclude")` of them (`r round(100 * mean(wb$final != "exclude"))`%) for full text or for a person to decide.
 
-## 4. Next steps
+## 5. Next steps
 
 1. **Full texts through Zotero.** Send the `r fmt(overall$included)` included records to a shared Zotero library through the Zotero web API, by DOI where there is one (`r fmt(overall$included_doi)` have a DOI). Zotero then fetches the PDFs it can find; `r fmt(overall$included_oa)` are open access according to OpenAlex. What Zotero cannot find becomes a short list to get through library access.
-2. **The records with no abstract.** Look up abstracts for the `r fmt(overall$title_only)` title-only records (Semantic Scholar, Crossref) and screen those found the same way; the rest are screened by a person or on full text.
-3. **Full-text screening.** Check each PDF against the same criteria with the full paper in hand, recording a reason for every exclusion.
-4. **Data extraction.** Extract into the template (`docs/synthesis/extraction_template.xlsx`), as piloted on five papers: costs, returns and adoption with their units, years and the cost items they include, each value with its page and a verbatim quote.
-5. **Extraction QC.** A second person extracts a random sample of papers independently; the two are compared field by field, and values are checked against their quotes.
+2. **Full-text screening.** Check each PDF against the same criteria with the full paper in hand, recording a reason for every exclusion.
+3. **Data extraction.** Extract into the template (`docs/synthesis/extraction_template.xlsx`), as piloted on five papers: costs, returns and adoption with their units, years and the cost items they include, each value with its page and a verbatim quote.
+4. **Extraction QC.** A second person extracts a random sample of papers independently; the two are compared field by field, and values are checked against their quotes.
 
 <style>
 .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 8px 0 18px; }
@@ -757,6 +790,14 @@ wb <- screen |> filter(wb_africa_included)
 .pnum { font-size: 1.5em; font-weight: 700; color: #1f6fb4; }
 .pnote { font-size: .82em; color: #555; }
 .plist { margin: 4px 0 0; padding-left: 18px; font-size: .82em; color: #444; }
+.vgroup { margin: 14px 0 6px; font-size: 1.05em; color: #444; }
+.vpractice { border: 1px solid #d0d7de; border-radius: 6px; padding: 6px 12px; margin: 4px 0; background: #fff; }
+.vpractice summary { cursor: pointer; }
+.vpractice code { font-size: .8em; }
+.vpilot { background: #31a354; color: #fff; border-radius: 4px; padding: 1px 6px; font-size: .75em; margin-left: 4px; }
+.vsystem { color: #666; font-size: .85em; margin-left: 6px; }
+.vfield { margin: 6px 0; font-size: .92em; }
+.vname { font-weight: 600; color: #1f6fb4; margin-right: 4px; }
 .parrow { text-align: center; color: #1f6fb4; font-size: 1.3em; line-height: 1; }
 @media (max-width: 600px) { .prisma { grid-template-columns: minmax(0, 1fr); } .parrow { display: none; } }
 </style>
