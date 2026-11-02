@@ -21,8 +21,8 @@ What it does: The review's progress, step by step, as one interactive page.
      values over its years and seasons, and what its costs include.
   2. The practices: Pete Steward's practice vocabulary.
   3. The OpenAlex search: hits per practice and outcome.
-  4. Title and abstract screening: a PRISMA diagram for any practice and
-     outcome, a table per search, and the person's QC of the model. Records
+  4. Title and abstract screening: a table per search, and the person's QC
+     of the model. Records
      with no abstract anywhere are left out for now.
   5. Next steps: full texts through Zotero, then extraction and its QC.
 Reads: data/wb_nbs_extraction_2022_cc4a.xlsx           (sheet extracted_cc4a)
@@ -87,7 +87,7 @@ HOW_COLOURS <- c("A separate value for each season" = "#08519c",
 OUTCOME_LABELS <- c(outcome1 = "Adoption", outcome2 = "Costs, returns and incentives",
                     outcome3 = "Carbon finance")
 
-# Where each screened record ends up, in the order the PRISMA diagram lists
+# Where each screened record ends up, in the order the counts list
 # them. A record a person checked at QC follows the person's decision.
 SCREEN_GROUPS <- c(
   not_africa = "Not in Africa",
@@ -254,9 +254,9 @@ screen_long <- screen |>
   tidyr::separate_rows(found_by, sep = ";[[:space:]]*") |>
   mutate(practice = sub("__.*$", "", found_by), outcome = sub("^.*__", "", found_by))
 
-#' The PRISMA counts for one practice and outcome ("all" for every one). A
+#' The screening counts for one practice and outcome ("all" for every one). A
 #' record found by several of the chosen searches is screened once.
-prisma_counts <- function(p, o) {
+screen_counts <- function(p, o) {
   d <- screen_long
   s <- counts
   if (p != "all") { d <- filter(d, practice == p); s <- filter(s, practice_group == p) }
@@ -268,11 +268,7 @@ prisma_counts <- function(p, o) {
          included_oa = sum(u$open_access & u$group == "included"),
          included_doi = sum(u$has_doi & u$group == "included")), g)
 }
-prisma_keys <- expand.grid(practice = c("all", names(PRACTICE_NAMES)),
-                           outcome = c("all", names(OUTCOME_LABELS)), stringsAsFactors = FALSE)
-prisma <- setNames(Map(prisma_counts, prisma_keys$practice, prisma_keys$outcome),
-                   paste(prisma_keys$practice, prisma_keys$outcome, sep = "|"))
-overall <- prisma[["all|all"]]
+overall <- screen_counts("all", "all")
 fmt <- function(x) format(x, big.mark = ",")
 ```
 
@@ -644,81 +640,14 @@ plot_ly(hit_matrix, x = ~outcome, y = ~practice, z = ~log10(pmax(hits, 1)), type
 
 Every record was screened on its title and abstract by a GPT model (gpt-4.1-mini), following the ERA screening workflow. The model answers one question per criterion: is the study in Africa, does it study one of the practices, does it report costs, adoption or carbon income, and what kind of study is it. Code then turns the answers into include, exclude or unsure, so every decision names the criterion that set it. Papers the 2022 reviewers included were shown to the model as examples. OpenAlex holds no abstract for some records; `R/01_search/fill_abstracts.R` found **`r fmt(abstracts_found)`** of them elsewhere (Europe PMC, Semantic Scholar, Crossref and the publishers' own pages), and those records were screened on their abstract.
 
-### PRISMA diagram
-
-Choose a practice and an outcome to see the flow for those searches. A record found by several of the chosen searches is counted once. A record found under two practices appears in both practices' diagrams, so the practice diagrams do not add up to the total. The diagram includes the person's QC decisions (below).
-
-```{r prisma, results = "asis"}
-#' One box of the diagram; `key` names the count the dropdowns fill in.
-box <- function(title, key, extra = "") {
-  sprintf('<div class="pbox"><div class="ptitle">%s</div><div class="pnum" data-k="%s"></div>%s</div>',
-          title, key, extra)
-}
-exclusion_list <- paste0('<ul class="plist">', paste(sprintf(
-  '<li><span data-k="%s"></span> %s</li>', EXCLUDE_GROUPS, sub("^(.)", "\\L\\1", SCREEN_GROUPS[EXCLUDE_GROUPS], perl = TRUE)),
-  collapse = ""), "</ul>")
-options_html <- function(values, labels, all_label) {
-  paste0(sprintf('<option value="all">%s</option>', all_label),
-         paste(sprintf('<option value="%s">%s</option>', values, labels), collapse = ""))
-}
-
-cat(sprintf('
-<div class="prisma-controls">
-  <label>Practice <select id="prisma-practice">%s</select></label>
-  <label>Outcome <select id="prisma-outcome">%s</select></label>
-</div>
-<div class="prisma" id="prisma">
-  <div class="pstage">Identification</div>
-  %s
-  %s
-  <div></div><div class="parrow">&darr;</div><div></div>
-  <div class="pstage">Screening</div>
-  %s
-  %s
-  <div></div><div class="parrow">&darr;</div>
-  %s
-  <div class="pstage pstage-in">Included</div>
-  %s
-  <div></div>
-</div>
-<script>
-(function () {
-  var data = %s;
-  var p = document.getElementById("prisma-practice");
-  var o = document.getElementById("prisma-outcome");
-  function show() {
-    var c = data[p.value + "|" + o.value];
-    document.querySelectorAll("#prisma [data-k]").forEach(function (e) {
-      e.textContent = (c[e.getAttribute("data-k")] || 0).toLocaleString("en");
-    });
-    document.querySelectorAll("#prisma [data-hide-zero]").forEach(function (e) {
-      e.style.display = c[e.getAttribute("data-hide-zero")] ? "" : "none";
-    });
-  }
-  p.addEventListener("change", show);
-  o.addEventListener("change", show);
-  show();
-})();
-</script>',
-  options_html(names(PRACTICE_NAMES), PRACTICE_NAMES, "All practices"),
-  options_html(names(OUTCOME_LABELS), OUTCOME_LABELS, "All outcomes"),
-  box("Records found by the searches", "found",
-      '<div class="pnote">from <span data-k="searches"></span> OpenAlex searches</div>'),
-  box("&rarr; Found by more than one search, counted once", "duplicates"),
-  box("Records screened on title and abstract", "screened"),
-  box("&rarr; Excluded", "excluded", exclusion_list),
-  box("&rarr; Unsure, for a person", "unsure"),
-  box("Included for full text", "included",
-      '<div class="pnote"><span data-k="included_doi"></span> with a DOI; <span data-k="included_oa"></span> open access in OpenAlex</div>'),
-  jsonlite::toJSON(prisma, auto_unbox = TRUE)))
-```
-
 ### Each search
 
+One row per search: what OpenAlex returned, how many of those records were screened, and where they ended up, with the person's QC decisions in place of the model's. A record found by more than one search is counted in each, so the rows add up to more than the `r fmt(overall$screened)` records screened. Across all searches: **`r fmt(overall$included)` included** for full text, `r fmt(overall$excluded)` excluded, `r fmt(overall$unsure)` unsure, for a person. Sort or filter by any column.
+
 ```{r screen-table}
-per_search <- prisma_keys |>
-  filter(practice != "all", outcome != "all") |>
-  mutate(c = Map(prisma_counts, practice, outcome)) |>
+per_search <- counts |>
+  transmute(practice = practice_group, outcome) |>
+  mutate(c = Map(screen_counts, practice, outcome)) |>
   transmute(
     Practice = PRACTICE_NAMES[practice],
     Outcome = OUTCOME_LABELS[outcome],
@@ -736,7 +665,7 @@ datatable(per_search, rownames = FALSE, class = "compact stripe hover", width = 
 
 ### Checking the model: the person's QC
 
-A person checked three samples of the model's decisions from the title and abstract, with the model's decision in view: a random 50 of its includes, a random 100 of its excludes, and every record it was unsure about that had an abstract. Their decisions replace the model's in the diagram and table above.
+A person checked three samples of the model's decisions from the title and abstract, with the model's decision in view: a random 50 of its includes, a random 100 of its excludes, and every record it was unsure about that had an abstract. Their decisions replace the model's in the table above.
 
 ```{r qc}
 qc_rows <- screen |> filter(checked)
@@ -780,16 +709,6 @@ wb <- screen |> filter(wb_africa_included)
 .step-status { font-size: .85em; color: #31a354; font-weight: 600; }
 .step.todo .step-status { color: #6c757d; }
 .step-note { font-size: .85em; color: #444; }
-.prisma-controls { display: flex; flex-wrap: wrap; gap: 16px; margin: 6px 0 14px; }
-.prisma-controls select { margin-left: 6px; max-width: 100%; }
-.prisma { display: grid; grid-template-columns: 110px minmax(0, 1fr) minmax(0, 1fr); gap: 6px 16px; align-items: center; max-width: 900px; }
-.pstage { background: #1f6fb4; color: #fff; font-weight: 600; text-align: center; border-radius: 6px; padding: 8px 4px; font-size: .9em; }
-.pstage-in { background: #31a354; }
-.pbox { border: 1px solid #1f6fb4; border-radius: 6px; padding: 8px 12px; background: #fff; }
-.ptitle { font-size: .9em; color: #333; }
-.pnum { font-size: 1.5em; font-weight: 700; color: #1f6fb4; }
-.pnote { font-size: .82em; color: #555; }
-.plist { margin: 4px 0 0; padding-left: 18px; font-size: .82em; color: #444; }
 .vgroup { margin: 14px 0 6px; font-size: 1.05em; color: #444; }
 .vpractice { border: 1px solid #d0d7de; border-radius: 6px; padding: 6px 12px; margin: 4px 0; background: #fff; }
 .vpractice summary { cursor: pointer; }
@@ -798,8 +717,6 @@ wb <- screen |> filter(wb_africa_included)
 .vsystem { color: #666; font-size: .85em; margin-left: 6px; }
 .vfield { margin: 6px 0; font-size: .92em; }
 .vname { font-weight: 600; color: #1f6fb4; margin-right: 4px; }
-.parrow { text-align: center; color: #1f6fb4; font-size: 1.3em; line-height: 1; }
-@media (max-width: 600px) { .prisma { grid-template-columns: minmax(0, 1fr); } .parrow { display: none; } }
 </style>
 
 ---
