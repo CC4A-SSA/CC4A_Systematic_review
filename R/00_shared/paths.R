@@ -125,9 +125,11 @@ FILE_WB2022_CC4A <- file.path(DIR_DATA, "wb_nbs_extraction_2022_cc4a.xlsx")
 FILE_MAP_WB2022  <- file.path(DIR_CATALOGUES, "map_wb2022_practices.csv")
 
 # Rendered reports that are shared with the team, committed with the repo.
+# The progress report covers every step so far: the 2022 World Bank data,
+# the OpenAlex search, the screening, and what comes next.
 DIR_REPORTS <- file.path(DIR_DOCS, "reports")
-FILE_WB2022_EXPLORER_RMD  <- file.path(DIR_R, "00_prep", "explore_wb2022.Rmd")
-FILE_WB2022_EXPLORER_HTML <- file.path(DIR_REPORTS, "wb2022_explorer.html")
+FILE_PROGRESS_RMD  <- file.path(DIR_R, "progress_report", "progress_report.Rmd")
+FILE_PROGRESS_HTML <- file.path(DIR_REPORTS, "progress_report.html")
 
 # The extraction schema, the one definition of every table and field, and
 # the Excel template built from it by R/00_shared/build_template.R. Both are

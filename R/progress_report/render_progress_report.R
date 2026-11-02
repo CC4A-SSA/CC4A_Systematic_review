@@ -1,14 +1,17 @@
-# What it does: Renders the interactive explorer of the 2022 World Bank NbS
-#   extraction (R/00_prep/explore_wb2022.Rmd) to one self-contained HTML file
+# What it does: Renders the review progress report
+#   (R/progress_report/progress_report.Rmd) to one self-contained HTML file
 #   that opens in any browser. Finds pandoc in RStudio or Quarto when R
 #   cannot see it on its own.
-# Reads: R/00_prep/explore_wb2022.Rmd
-#        data/wb_nbs_extraction_2022_cc4a.xlsx (through the Rmd)
-# Writes: docs/reports/wb2022_explorer.html
+# Reads: R/progress_report/progress_report.Rmd
+#        data/wb_nbs_extraction_2022_cc4a.xlsx           (through the Rmd)
+#        outputs/01_search/search_counts.csv              (through the Rmd)
+#        outputs/01_search/search_records_vs_wb2022.csv   (through the Rmd)
+#        outputs/03_screen/screen_scope.csv               (through the Rmd)
+# Writes: docs/reports/progress_report.html
 # Flags: none
 #
 # Run with:
-#   Rscript R/00_prep/render_wb2022_explorer.R
+#   Rscript R/progress_report/render_progress_report.R
 # Or open the Rmd in RStudio and press Knit (the HTML then lands next to it).
 
 root <- rprojroot::find_root(rprojroot::has_file("CC4A.Rproj"))
@@ -35,11 +38,11 @@ if (!rmarkdown::pandoc_available()) {
 
 dir.create(DIR_REPORTS, recursive = TRUE, showWarnings = FALSE)
 rmarkdown::render(
-  FILE_WB2022_EXPLORER_RMD,
-  output_file = basename(FILE_WB2022_EXPLORER_HTML),
+  FILE_PROGRESS_RMD,
+  output_file = basename(FILE_PROGRESS_HTML),
   output_dir = DIR_REPORTS,
   intermediates_dir = tempdir(),
   knit_root_dir = root,
   quiet = TRUE
 )
-message("Written: ", FILE_WB2022_EXPLORER_HTML)
+message("Written: ", FILE_PROGRESS_HTML)
