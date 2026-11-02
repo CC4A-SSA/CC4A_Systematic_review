@@ -1,12 +1,12 @@
 ---
-title: "Costs and returns over time: African studies in the 2022 World Bank NbS extraction"
-subtitle: "What the data cover, which papers report each outcome for how many years, and what the values look like"
+title: "CC4A cost and adoption review: progress"
+subtitle: "The 2022 World Bank data, the OpenAlex search, title and abstract screening, and what comes next"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
   html_document:
     toc: true
     toc_float: true
-    toc_depth: 2
+    toc_depth: 3
     code_folding: hide
     theme:
       version: 5
@@ -15,16 +15,22 @@ output:
 ---
 
 <!--
-What it does: An interactive page on the costs and returns reported by the
-  African studies in the 2022 World Bank NbS extraction, cleaned for CC4A:
-  the scope of the data (map, papers per outcome and practice); for a chosen
-  outcome, how many papers report it for 1, 2, 3 ... years and a table of
-  those papers; and, for a chosen paper, its values over its years and
-  seasons with the cost items included.
-Reads: data/wb_nbs_extraction_2022_cc4a.xlsx  (sheet extracted_cc4a)
-Writes: the rendered HTML, docs/reports/wb2022_explorer.html when built with
-  R/00_prep/render_wb2022_explorer.R
-Flags: none. Knit in RStudio, or run R/00_prep/render_wb2022_explorer.R.
+What it does: The review's progress, step by step, as one interactive page.
+  1. The 2022 World Bank NbS extraction, African studies: the scope of the
+     data, how many years each paper reports an outcome for, a chosen paper's
+     values over its years and seasons, and what its costs include.
+  2. The OpenAlex search: hits per practice and outcome.
+  3. Title and abstract screening: a PRISMA diagram for any practice and
+     outcome, a table per search, and the person's QC of the model.
+  4. Next steps: full texts through Zotero, then extraction and its QC.
+Reads: data/wb_nbs_extraction_2022_cc4a.xlsx           (sheet extracted_cc4a)
+       docs/synthesis/key-words.xlsx                    practice names
+       outputs/01_search/search_counts.csv              hits per search
+       outputs/01_search/search_records_vs_wb2022.csv   DOI and open access
+       outputs/03_screen/screen_scope.csv               decisions and QC
+Writes: the rendered HTML, docs/reports/progress_report.html when built with
+  R/progress_report/render_progress_report.R
+Flags: none. Knit in RStudio, or run R/progress_report/render_progress_report.R.
 -->
 
 ```{r setup, include = FALSE}
@@ -73,6 +79,33 @@ HOW_COLOURS <- c("A separate value for each season" = "#08519c",
                  "A separate value for each year" = "#4292c6",
                  "One value pooled over the years" = "#fdae61",
                  "One year" = "#bdbdbd")
+
+# The three outcome blocks of the search (docs/synthesis/key-words.xlsx).
+OUTCOME_LABELS <- c(outcome1 = "Adoption", outcome2 = "Costs, returns and incentives",
+                    outcome3 = "Carbon finance")
+
+# Where each screened record ends up, in the order the PRISMA diagram lists
+# them. A record a person checked at QC follows the person's decision.
+SCREEN_GROUPS <- c(
+  not_africa = "Not in Africa",
+  review = "Review or meta-analysis (kept for citation chasing)",
+  no_practice = "No listed practice studied",
+  no_outcome = "No cost, adoption or carbon income evidence",
+  other_type = "Not a field, survey, evaluation or economic study",
+  qc_excluded = "Excluded by a person at QC",
+  title_only = "Title only, no abstract yet",
+  unsure = "Unsure, for a person",
+  included = "Included for full text"
+)
+EXCLUDE_GROUPS <- names(SCREEN_GROUPS)[1:6]
+# The screening rule (R/03_screen/screen_scope.R) behind each model exclusion.
+EXCLUDE_RULES <- c(
+  "exclude: not in Africa" = "not_africa",
+  "exclude: review (keep for citation chasing)" = "review",
+  "exclude: no listed practice studied" = "no_practice",
+  "exclude: no cost, adoption or carbon income evidence" = "no_outcome",
+  "exclude: not a field, survey, evaluation or economic study" = "other_type"
+)
 ```
 
 ```{r data}
@@ -163,7 +196,105 @@ money <- af |>
   mutate(items = items_by_row(pick(all_of(COST_ITEMS))))
 ```
 
-## Scope of the data
+```{r screening-data}
+#' Read only the named columns of a pipeline CSV, every column as text.
+read_cols <- function(path, cols) {
+  readr::read_csv(path, col_types = readr::cols(.default = readr::col_character()),
+                  col_select = all_of(cols), na = "", progress = FALSE,
+                  show_col_types = FALSE)
+}
+
+keywords <- readxl::read_excel(FILE_KEYWORDS_XLSX, col_types = "text")
+practice_names <- keywords |>
+  filter(!practice_group %in% c("geography", names(OUTCOME_LABELS))) |>
+  distinct(practice_group, practice_label)
+PRACTICE_NAMES <- setNames(practice_names$practice_label, practice_names$practice_group)
+
+counts <- read_cols(FILE_SEARCH_COUNTS, c("search_id", "practice_group", "outcome", "hits",
+                                          "counted_on")) |>
+  mutate(hits = as.integer(hits))
+search_date <- format(as.Date(max(counts$counted_on)), "%d %B %Y")
+
+records <- read_cols(FILE_SEARCH_MATCHED, c("record_id", "doi", "is_oa"))
+
+# A person's QC decision overrides the model's. Spelling slips ("exlude")
+# are read by their first letters. An exclusion the person confirmed keeps
+# the model's reason; one the person made is counted as a QC exclusion.
+screen <- read_cols(FILE_SCREEN, c("record_id", "qc_sample", "qc_decision", "decision",
+                                   "decision_rule", "found_by", "wb_positive", "wb_africa")) |>
+  left_join(records, by = "record_id") |>
+  mutate(
+    qc = tolower(trimws(coalesce(qc_decision, ""))),
+    qc = case_when(startsWith(qc, "inc") ~ "include", startsWith(qc, "ex") ~ "exclude",
+                   startsWith(qc, "uns") ~ "unsure", TRUE ~ NA_character_),
+    checked = !is.na(qc_sample) & !is.na(qc),
+    final = ifelse(checked, qc, decision),
+    group = case_when(
+      checked & final == "exclude" & decision != "exclude" ~ "qc_excluded",
+      final == "exclude" ~ unname(EXCLUDE_RULES[decision_rule]),
+      final == "include" ~ "included",
+      decision_rule == "unsure: title only" ~ "title_only",
+      TRUE ~ "unsure"
+    ),
+    open_access = is_oa %in% "TRUE",
+    has_doi = !is.na(doi),
+    wb_africa_included = wb_positive %in% "TRUE" & wb_africa %in% "TRUE"
+  )
+
+# One row per record and search that found it.
+screen_long <- screen |>
+  select(record_id, found_by, group, open_access, has_doi) |>
+  tidyr::separate_rows(found_by, sep = ";[[:space:]]*") |>
+  mutate(practice = sub("__.*$", "", found_by), outcome = sub("^.*__", "", found_by))
+
+#' The PRISMA counts for one practice and outcome ("all" for every one). A
+#' record found by several of the chosen searches is screened once.
+prisma_counts <- function(p, o) {
+  d <- screen_long
+  s <- counts
+  if (p != "all") { d <- filter(d, practice == p); s <- filter(s, practice_group == p) }
+  if (o != "all") { d <- filter(d, outcome == o); s <- filter(s, outcome == o) }
+  u <- distinct(d, record_id, .keep_all = TRUE)
+  g <- as.list(table(factor(u$group, levels = names(SCREEN_GROUPS))))
+  c(list(searches = nrow(s), hits = sum(s$hits), found = nrow(d), screened = nrow(u),
+         duplicates = nrow(d) - nrow(u), excluded = sum(unlist(g[EXCLUDE_GROUPS])),
+         included_oa = sum(u$open_access & u$group == "included"),
+         included_doi = sum(u$has_doi & u$group == "included")), g)
+}
+prisma_keys <- expand.grid(practice = c("all", names(PRACTICE_NAMES)),
+                           outcome = c("all", names(OUTCOME_LABELS)), stringsAsFactors = FALSE)
+prisma <- setNames(Map(prisma_counts, prisma_keys$practice, prisma_keys$outcome),
+                   paste(prisma_keys$practice, prisma_keys$outcome, sep = "|"))
+overall <- prisma[["all|all"]]
+fmt <- function(x) format(x, big.mark = ",")
+```
+
+## Where the review is
+
+```{r at-a-glance, results = "asis"}
+steps <- list(
+  c("1", "The 2022 World Bank data", "Done",
+    paste0(n_distinct(af$StudyID), " African studies with a CC4A practice, cleaned and explored")),
+  c("2", "OpenAlex search", "Done",
+    paste0(overall$searches, " searches on ", search_date, ", ", fmt(overall$screened),
+           " unique records")),
+  c("3", "Title and abstract screening", "Done, checked by a person",
+    paste0(fmt(overall$included), " included, ", fmt(overall$excluded), " excluded, ",
+           fmt(overall$title_only + overall$unsure), " waiting for an abstract")),
+  c("4", "Full texts through Zotero", "Next", "Fetch the PDFs of the included records"),
+  c("5", "Data extraction and QC", "After that", "Extract into the template, then check a sample")
+)
+cards <- vapply(steps, function(s) sprintf(
+  '<div class="step %s"><div class="step-n">%s</div><div><b>%s</b><div class="step-status">%s</div><div class="step-note">%s</div></div></div>',
+  ifelse(startsWith(s[3], "Done"), "done", "todo"), s[1], s[2], s[3], s[4]), "")
+cat('<div class="steps">', paste(cards, collapse = ""), '</div>')
+```
+
+## 1. The 2022 World Bank data
+
+The 2022 World Bank NbS review extracted costs, returns and adoption from studies in low and middle income countries. Cleaned for CC4A (`data/wb_nbs_extraction_2022_cc4a.xlsx`), it is the starting point: the papers it holds need no new search, and the papers its reviewers included are used below to test the screening.
+
+### Scope of the data
 
 The extraction covered low and middle income countries everywhere; this page keeps the **`r n_distinct(af$StudyID)` African studies** (`r format(nrow(af), big.mark = ",")` observations) that test a CC4A practice. Values are as extracted in 2022, in each paper's own currency and prices; nothing is converted.
 
@@ -217,7 +348,7 @@ bscols(
 )
 ```
 
-## How many years does each paper report an outcome for?
+### How many years does each paper report an outcome for?
 
 Choose an outcome. The chart counts the papers reporting it by the number of years their data cover, and colours them by how those years are reported: **a separate value for each season** or **for each year** (these show change over time), **one value pooled over the years** (does not), or a single year. Tick a number of years to list those papers in the table.
 
@@ -279,7 +410,7 @@ htmltools::tagList(
 )
 ```
 
-## Plot a paper over time
+### Plot a paper over time
 
 Choose an outcome and a paper (the table above lists the papers that report each outcome; if the chart is empty, the paper does not report that outcome). **Solid blue lines are treatment arms, grey dashed lines are control arms.** Seasons are separate points within their year. A value pooled over several years is a **hollow point in the middle of its period** (hover to see the years it covers); it is not joined to other points, because it is not a value for any one year. Hover for the arm, value, year or season and the cost items.
 
@@ -416,7 +547,7 @@ window.addEventListener("load", function () {
             jsonlite::toJSON(papers_by_outcome, auto_unbox = FALSE)))
 ```
 
-## What the costs include
+### What the costs include
 
 For each cost item, how many papers' cost figures include it, leave it out, or do not say, across all cost outcomes (variable, total, labour ...). A paper counts as including an item when any of its cost figures does. Costs that leave out labour or land are not comparable with costs that include them.
 
@@ -451,6 +582,181 @@ plot_ly(cost_items, y = ~factor(item, levels = item_order), x = ~n, color = ~sta
          legend = list(orientation = "h", y = -0.2))
 ```
 
+## 2. The OpenAlex search
+
+The 2022 data are not enough on their own, so the literature was searched again in OpenAlex on `r search_date`: **`r overall$searches` searches**, one for each of the `r length(PRACTICE_NAMES)` practices and the three outcome blocks (adoption; costs, returns and incentives; carbon finance), each combined with the Africa terms and limited to papers from 1990 to 2026. The search terms are in `docs/synthesis/key-words.xlsx`. Together the searches returned `r fmt(overall$hits)` hits; many papers are found by more than one search, which leaves **`r fmt(overall$screened)` unique records**.
+
+```{r search-heatmap, fig.height = 6}
+hit_matrix <- counts |>
+  mutate(practice = factor(PRACTICE_NAMES[practice_group], levels = rev(PRACTICE_NAMES)),
+         outcome = factor(OUTCOME_LABELS[outcome], levels = OUTCOME_LABELS))
+plot_ly(hit_matrix, x = ~outcome, y = ~practice, z = ~log10(pmax(hits, 1)), type = "heatmap",
+        colorscale = list(c(0, "#f7fbff"), c(1, "#6baed6")), showscale = FALSE, height = 560,
+        text = ~paste0(practice, ", ", tolower(outcome), ": ", fmt(hits), " hits"),
+        hoverinfo = "text", xgap = 2, ygap = 2) |>
+  add_annotations(x = ~outcome, y = ~practice, text = ~fmt(hits), showarrow = FALSE,
+                  font = list(color = "#222")) |>
+  layout(title = list(text = "OpenAlex hits per practice and outcome", x = 0),
+         xaxis = list(title = "", side = "top"), yaxis = list(title = ""),
+         margin = list(l = 10, t = 70))
+```
+
+## 3. Title and abstract screening
+
+Every record was screened on its title and abstract by a GPT model (gpt-4.1-mini), following the ERA screening workflow. The model answers one question per criterion: is the study in Africa, does it study one of the practices, does it report costs, adoption or carbon income, and what kind of study is it. Code then turns the answers into include, exclude or unsure, so every decision names the criterion that set it. A record with no abstract is never excluded on its title alone (unless it is clearly outside Africa); it waits for an abstract. Papers the 2022 reviewers included were shown to the model as examples.
+
+### PRISMA diagram
+
+Choose a practice and an outcome to see the flow for those searches. A record found by several of the chosen searches is counted once. A record found under two practices appears in both practices' diagrams, so the practice diagrams do not add up to the total. The diagram includes the person's QC decisions (below).
+
+```{r prisma, results = "asis"}
+#' One box of the diagram; `key` names the count the dropdowns fill in.
+box <- function(title, key, extra = "") {
+  sprintf('<div class="pbox"><div class="ptitle">%s</div><div class="pnum" data-k="%s"></div>%s</div>',
+          title, key, extra)
+}
+exclusion_list <- paste0('<ul class="plist">', paste(sprintf(
+  '<li><span data-k="%s"></span> %s</li>', EXCLUDE_GROUPS, sub("^(.)", "\\L\\1", SCREEN_GROUPS[EXCLUDE_GROUPS], perl = TRUE)),
+  collapse = ""), "</ul>")
+options_html <- function(values, labels, all_label) {
+  paste0(sprintf('<option value="all">%s</option>', all_label),
+         paste(sprintf('<option value="%s">%s</option>', values, labels), collapse = ""))
+}
+
+cat(sprintf('
+<div class="prisma-controls">
+  <label>Practice <select id="prisma-practice">%s</select></label>
+  <label>Outcome <select id="prisma-outcome">%s</select></label>
+</div>
+<div class="prisma" id="prisma">
+  <div class="pstage">Identification</div>
+  %s
+  %s
+  <div></div><div class="parrow">&darr;</div><div></div>
+  <div class="pstage">Screening</div>
+  %s
+  %s
+  <div></div><div class="parrow">&darr;</div>
+  %s
+  <div class="pstage pstage-in">Included</div>
+  %s
+  <div></div>
+</div>
+<script>
+(function () {
+  var data = %s;
+  var p = document.getElementById("prisma-practice");
+  var o = document.getElementById("prisma-outcome");
+  function show() {
+    var c = data[p.value + "|" + o.value];
+    document.querySelectorAll("#prisma [data-k]").forEach(function (e) {
+      e.textContent = (c[e.getAttribute("data-k")] || 0).toLocaleString("en");
+    });
+    document.querySelectorAll("#prisma [data-hide-zero]").forEach(function (e) {
+      e.style.display = c[e.getAttribute("data-hide-zero")] ? "" : "none";
+    });
+  }
+  p.addEventListener("change", show);
+  o.addEventListener("change", show);
+  show();
+})();
+</script>',
+  options_html(names(PRACTICE_NAMES), PRACTICE_NAMES, "All practices"),
+  options_html(names(OUTCOME_LABELS), OUTCOME_LABELS, "All outcomes"),
+  box("Records found by the searches", "found",
+      '<div class="pnote">from <span data-k="searches"></span> OpenAlex searches</div>'),
+  box("&rarr; Found by more than one search, counted once", "duplicates"),
+  box("Records screened on title and abstract", "screened"),
+  box("&rarr; Excluded", "excluded", exclusion_list),
+  box("&rarr; Waiting: title only, no abstract yet", "title_only",
+      '<div class="pnote" data-hide-zero="unsure">plus <span data-k="unsure"></span> still unsure, for a person</div>'),
+  box("Included for full text", "included",
+      '<div class="pnote"><span data-k="included_doi"></span> with a DOI; <span data-k="included_oa"></span> open access in OpenAlex</div>'),
+  jsonlite::toJSON(prisma, auto_unbox = TRUE)))
+```
+
+### Each search
+
+```{r screen-table}
+per_search <- prisma_keys |>
+  filter(practice != "all", outcome != "all") |>
+  mutate(c = Map(prisma_counts, practice, outcome)) |>
+  transmute(
+    Practice = PRACTICE_NAMES[practice],
+    Outcome = OUTCOME_LABELS[outcome],
+    `OpenAlex hits` = vapply(c, `[[`, 1L, "hits"),
+    Screened = vapply(c, `[[`, 1L, "screened"),
+    Excluded = vapply(c, `[[`, 1L, "excluded"),
+    `Title only` = vapply(c, function(x) x$title_only + x$unsure, 1L),
+    Included = vapply(c, `[[`, 1L, "included"),
+    `% included` = round(100 * Included / pmax(Screened, 1))
+  )
+datatable(per_search, rownames = FALSE, class = "compact stripe hover", width = "100%",
+          filter = "top", options = list(pageLength = 15, dom = "tip", order = list(list(6, "desc")))) |>
+  formatRound(c("OpenAlex hits", "Screened", "Excluded", "Title only", "Included"), digits = 0)
+```
+
+### Checking the model: the person's QC
+
+A person checked three samples of the model's decisions from the title and abstract, with the model's decision in view: a random 50 of its includes, a random 100 of its excludes, and every record it was unsure about that had an abstract. Their decisions replace the model's in the diagram and table above.
+
+```{r qc}
+qc_rows <- screen |> filter(checked)
+qc_table <- qc_rows |>
+  mutate(Sample = recode(qc_sample, "check include" = "Random sample of the model's includes",
+                         "check exclude" = "Random sample of the model's excludes",
+                         "decide unsure" = "All the model's unsure records with an abstract")) |>
+  group_by(Sample) |>
+  summarise(Checked = n(),
+            `Person: include` = sum(qc == "include"),
+            `Person: exclude` = sum(qc == "exclude"),
+            `Agreed with the model` = if (all(decision == "unsure")) "n/a"
+                                      else paste0(sum(qc == decision), " (", round(100 * mean(qc == decision)), "%)"),
+            .groups = "drop")
+knitr::kable(qc_table, align = "lrrrr")
+
+inc <- qc_rows |> filter(qc_sample == "check include")
+exc <- qc_rows |> filter(qc_sample == "check exclude")
+missed <- sum(exc$qc != "exclude")
+wb <- screen |> filter(wb_africa_included)
+```
+
+- **Includes.** The person kept `r sum(inc$qc == "include")` of the `r nrow(inc)` sampled includes (`r round(100 * mean(inc$qc == "include"))`%). The full-text screen will catch more of the includes that do not hold up.
+- **Excludes.** The person would have kept `r missed` of the `r nrow(exc)` sampled excludes. `r if (missed == 0) paste0("With none in ", nrow(exc), ", the share of relevant papers among all ", fmt(sum(screen$decision == "exclude")), " excludes is, with 95% confidence, below about ", round(300 / nrow(exc)), "%.") else ""`
+- **Unsure.** Of the `r sum(qc_rows$qc_sample == "decide unsure")` unsure records with an abstract, the person included `r sum(qc_rows$qc_sample == "decide unsure" & qc_rows$qc == "include")`.
+- **Against the 2022 reviewers.** The search found `r nrow(wb)` African papers the 2022 reviewers included. The screening keeps `r sum(wb$final != "exclude")` of them (`r round(100 * mean(wb$final != "exclude"))`%) for full text or for an abstract.
+
+## 4. Next steps
+
+1. **Full texts through Zotero.** Send the `r fmt(overall$included)` included records to a shared Zotero library through the Zotero web API, by DOI where there is one (`r fmt(overall$included_doi)` have a DOI). Zotero then fetches the PDFs it can find; `r fmt(overall$included_oa)` are open access according to OpenAlex. What Zotero cannot find becomes a short list to get through library access.
+2. **The records with no abstract.** Look up abstracts for the `r fmt(overall$title_only)` title-only records (Semantic Scholar, Crossref) and screen those found the same way; the rest are screened by a person or on full text.
+3. **Full-text screening.** Check each PDF against the same criteria with the full paper in hand, recording a reason for every exclusion.
+4. **Data extraction.** Extract into the template (`docs/synthesis/extraction_template.xlsx`), as piloted on five papers: costs, returns and adoption with their units, years and the cost items they include, each value with its page and a verbatim quote.
+5. **Extraction QC.** A second person extracts a random sample of papers independently; the two are compared field by field, and values are checked against their quotes.
+
+<style>
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 8px 0 18px; }
+.step { display: flex; gap: 10px; padding: 10px 12px; border-radius: 6px; border: 1px solid #d0d7de; background: #fff; }
+.step.done { border-left: 5px solid #31a354; }
+.step.todo { border-left: 5px solid #bdbdbd; }
+.step-n { font-size: 1.4em; font-weight: 700; color: #6c757d; line-height: 1; }
+.step-status { font-size: .85em; color: #31a354; font-weight: 600; }
+.step.todo .step-status { color: #6c757d; }
+.step-note { font-size: .85em; color: #444; }
+.prisma-controls { display: flex; flex-wrap: wrap; gap: 16px; margin: 6px 0 14px; }
+.prisma-controls select { margin-left: 6px; max-width: 100%; }
+.prisma { display: grid; grid-template-columns: 110px minmax(0, 1fr) minmax(0, 1fr); gap: 6px 16px; align-items: center; max-width: 900px; }
+.pstage { background: #1f6fb4; color: #fff; font-weight: 600; text-align: center; border-radius: 6px; padding: 8px 4px; font-size: .9em; }
+.pstage-in { background: #31a354; }
+.pbox { border: 1px solid #1f6fb4; border-radius: 6px; padding: 8px 12px; background: #fff; }
+.ptitle { font-size: .9em; color: #333; }
+.pnum { font-size: 1.5em; font-weight: 700; color: #1f6fb4; }
+.pnote { font-size: .82em; color: #555; }
+.plist { margin: 4px 0 0; padding-left: 18px; font-size: .82em; color: #444; }
+.parrow { text-align: center; color: #1f6fb4; font-size: 1.3em; line-height: 1; }
+@media (max-width: 600px) { .prisma { grid-template-columns: minmax(0, 1fr); } .parrow { display: none; } }
+</style>
+
 ---
 
-*Built from `data/wb_nbs_extraction_2022_cc4a.xlsx` by `R/00_prep/explore_wb2022.Rmd`. African studies only; practice mapping in `catalogues/map_wb2022_practices.csv`. Values are as extracted in 2022, in each paper's own currency and prices.*
+*Built by `R/progress_report/progress_report.Rmd` from `data/wb_nbs_extraction_2022_cc4a.xlsx`, `outputs/01_search/` and `outputs/03_screen/screen_scope.csv`. Section 1: African studies only, practice mapping in `catalogues/map_wb2022_practices.csv`, values as extracted in 2022 in each paper's own currency and prices.*

@@ -16,6 +16,12 @@ terms. The pipeline is being moved to the protocol in phases (§10); until
 then, parts of sections 2 to 9 describe the first design, which covered costs
 and adoption only.
 
+**Where the review is**: the progress report,
+https://cc4a-ssa.github.io/CC4A_Systematic_review/docs/reports/progress_report.html
+(the 2022 World Bank data, the OpenAlex search, the screening with its PRISMA
+diagrams and QC, and the next steps). Rebuild it with
+`Rscript R/progress_report/render_progress_report.R`.
+
 Contact: Namita Joshi, Alliance Bioversity International and CIAT
 (n.joshi@cgiar.org). Namita leads the synthesis; this repository is the copy
 of record for the protocol.

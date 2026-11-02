@@ -90,6 +90,10 @@ SEARCH_COLS <- c(
 #' market"` matches 4.6 million works, `"carbon credit" OR "carbon market"`
 #' about 18 thousand. Returns the fixed string and the terms that changed.
 quote_bare_phrases <- function(block) {
+  # OpenAlex refuses wildcards in a stemmed title and abstract search, and
+  # does not need them: "incentive" already finds "incentives". Removed with
+  # a warning in read_blocks().
+  block <- gsub("[*?]", "", block)
   terms <- trimws(strsplit(block, "[[:space:]]+OR[[:space:]]+")[[1]])
   bare <- !startsWith(terms, "\"") & grepl("[[:space:]]", terms)
   terms[bare] <- paste0("\"", terms[bare], "\"")
@@ -114,6 +118,11 @@ read_blocks <- function() {
          paste(kw$practice_group[grepl(",", kw$keyword, fixed = TRUE)], collapse = ", "))
   }
 
+  for (i in which(grepl("[*?]", kw$keyword))) {
+    log_msg("wildcards removed in ", kw$practice_group[i], " (OpenAlex does not accept ",
+            "them here and stems words anyway). Worth removing in key-words.xlsx",
+            level = "warn")
+  }
   fixed <- lapply(kw$keyword, quote_bare_phrases)
   kw$keyword_sent <- vapply(fixed, `[[`, "", "text")
   kw$quoted_by_script <- vapply(fixed, function(f) paste(f$changed, collapse = "; "), "")
@@ -229,14 +238,19 @@ read_wb_refs <- function() {
     return(NULL)
   }
   refs <- readxl::read_excel(FILE_WB2022, sheet = WB_REFS_SHEET, col_types = "text")
+  refs <- refs[!duplicated(refs$ID), ]
   tibble::tibble(
-    wb_ref_id = refs$ID,
-    doi_n     = normalise_doi(refs$DOI),
-    title_n   = normalise_title(refs$Title)
+    wb_ref_id   = refs$ID,
+    wb_status   = refs$data_source_name,
+    doi_n       = normalise_doi(refs$DOI),
+    title_n     = normalise_title(refs$Title),
+    wb_abstract = refs$Abstract
   )
 }
 
-#' One row per unique record, marked when the 2022 refs already hold it.
+#' One row per unique record, marked when the 2022 refs already hold it, with
+#' its 2022 status, and its abstract filled from the 2022 refs where OpenAlex
+#' has none (abstract_source says which).
 #' DOI first; a normalised exact title for records without a DOI match.
 match_wb <- function(raw, refs) {
   records <- raw |>
@@ -249,9 +263,11 @@ match_wb <- function(raw, refs) {
                     dplyr::first),
       .groups = "drop"
     )
+  records$abstract_source <- ifelse(nzchar(dplyr::coalesce(records$abstract, "")), "openalex", "none")
   if (is.null(refs)) {
     records$in_wb2022 <- NA
     records$wb_ref_id <- NA_character_
+    records$wb_status <- NA_character_
     records$match_basis <- NA_character_
     return(records)
   }
@@ -261,7 +277,12 @@ match_wb <- function(raw, refs) {
   hit <- ifelse(!is.na(by_doi), by_doi, by_title)
   records$in_wb2022 <- !is.na(hit)
   records$wb_ref_id <- refs$wb_ref_id[hit]
+  records$wb_status <- refs$wb_status[hit]
   records$match_basis <- ifelse(!is.na(by_doi), "doi", ifelse(!is.na(by_title), "title", NA))
+  # OpenAlex has no abstract for some records; the 2022 Refs sheet often does.
+  fill <- records$abstract_source == "none" & nzchar(dplyr::coalesce(refs$wb_abstract[hit], ""))
+  records$abstract[fill] <- refs$wb_abstract[hit][fill]
+  records$abstract_source[fill] <- "wb2022"
   records
 }
 

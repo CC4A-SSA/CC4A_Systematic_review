@@ -76,6 +76,17 @@ FILE_SCREEN        <- file.path(DIR_SCREEN, "screen_scope.csv")
 FILE_SCREEN_RULED  <- file.path(DIR_SCREEN, "screen_ruled.csv")
 FILE_SCREEN_UNSURE <- file.path(DIR_REVIEW, "screen_unsure.csv")
 FILE_SCREEN_OVERRIDES <- file.path(DIR_CATALOGUES, "screen_overrides.csv")
+FILE_SCREEN_PROMPT   <- file.path(DIR_CATALOGUES, "screening_prompt.md")
+# Rewritten after every batch while screening runs: open it to watch progress.
+FILE_SCREEN_PROGRESS <- file.path(DIR_SCREEN, "progress.txt")
+FILE_SCREEN_HUMAN_SAMPLE <- file.path(DIR_REVIEW, "screen_calibration_for_person.csv")
+# The random QC sample for a person (blind), and the model's decisions for it.
+FILE_SCREEN_QC_SAMPLE <- file.path(DIR_REVIEW, "screen_qc_sample.csv")
+FILE_SCREEN_QC_KEY    <- file.path(DIR_SCREEN, "screen_qc_key.csv")
+# One calibration file per model, so models can be compared.
+screen_calibration_file <- function(model) {
+  file.path(DIR_SCREEN, paste0("calibration_", gsub("[^A-Za-z0-9.-]", "_", model), ".csv"))
+}
 
 # Step 4 fetch
 FILE_FETCH_INDEX   <- file.path(DIR_FULLTEXT, "fulltext_index.csv")
@@ -114,9 +125,11 @@ FILE_WB2022_CC4A <- file.path(DIR_DATA, "wb_nbs_extraction_2022_cc4a.xlsx")
 FILE_MAP_WB2022  <- file.path(DIR_CATALOGUES, "map_wb2022_practices.csv")
 
 # Rendered reports that are shared with the team, committed with the repo.
+# The progress report covers every step so far: the 2022 World Bank data,
+# the OpenAlex search, the screening, and what comes next.
 DIR_REPORTS <- file.path(DIR_DOCS, "reports")
-FILE_WB2022_EXPLORER_RMD  <- file.path(DIR_R, "00_prep", "explore_wb2022.Rmd")
-FILE_WB2022_EXPLORER_HTML <- file.path(DIR_REPORTS, "wb2022_explorer.html")
+FILE_PROGRESS_RMD  <- file.path(DIR_R, "progress_report", "progress_report.Rmd")
+FILE_PROGRESS_HTML <- file.path(DIR_REPORTS, "progress_report.html")
 
 # The extraction schema, the one definition of every table and field, and
 # the Excel template built from it by R/00_shared/build_template.R. Both are
