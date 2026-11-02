@@ -22,14 +22,18 @@
 #        --model=      the OpenAI model (default SCREEN_MODEL_DEFAULT)
 #        --limit=      screen at most this many records, for a test run
 #        --refresh     screen again records already in the output
-#        --unreadable-to-unsure  keep records whose answer cannot be read as
-#                      unsure (for a person) instead of retrying them again
+#        --refresh-filled  screen again the records screened on their title
+#                      alone that have an abstract now (from
+#                      R/01_search/fill_abstracts.R); their QC columns are kept
+#        --max-usd=    stop before a batch would take the run past this many
+#                      US dollars (default MAX_USD_DEFAULT)
 #
 # Run with:
 #   Rscript R/03_screen/screen_scope.R --dry
 #   Rscript R/03_screen/screen_scope.R --calibrate --model=gpt-4.1-mini
 #   Rscript R/03_screen/screen_scope.R --limit=100
 #   Rscript R/03_screen/screen_scope.R
+#   Rscript R/03_screen/screen_scope.R --refresh-filled --dry
 # Watch a run: open outputs/03_screen/progress.txt (it refreshes every batch).
 
 root <- rprojroot::find_root(rprojroot::has_file("CC4A.Rproj"))
@@ -68,10 +72,13 @@ MAX_ABSTRACT_CHARS <- 3000
 # for their hidden reasoning).
 MAX_ANSWER_TOKENS <- 700
 
-# Set by --unreadable-to-unsure: a record whose answer cannot be read is kept
-# as unsure instead of being left for the next run. Use it on a retry run,
-# once the failures have proved to repeat.
-UNREADABLE_TO_UNSURE <- FALSE
+# A run stops before a batch would take it past this many US dollars. Raise
+# it with --max-usd= once a --dry estimate says what a run needs.
+MAX_USD_DEFAULT <- 5
+
+# The QC columns a person fills in screen_scope.csv, carried over when a
+# record is screened again.
+QC_COLUMNS <- c("qc_sample", "qc_decision", "qc_note")
 
 # Calibration: how many 2022 human includes become examples in the prompt
 # (they are then left out of the recall test), and how many random records a
@@ -148,21 +155,39 @@ record_prompt <- function(title, abstract) {
 
 # ---- the answers --------------------------------------------------------------
 
-yn <- function(what) ellmer::type_enum(c("yes", "no", "unclear"), what)
-SCREEN_TYPE <- ellmer::type_object(
-  countries = ellmer::type_array(ellmer::type_string(), "Countries named, or empty"),
+# The answer the model must give, as a JSON schema (OpenAI structured
+# output, strict: every field present, nothing else).
+yn <- function(what) list(type = "string", enum = list("yes", "no", "unclear"), description = what)
+SCREEN_PROPERTIES <- list(
+  countries = list(type = "array", items = list(type = "string"),
+                   description = "Countries named, or empty"),
   in_africa = yn("Done in Africa"),
-  practices = ellmer::type_array(ellmer::type_string(), "Practice codes from the list, or empty"),
+  practices = list(type = "array", items = list(type = "string"),
+                   description = "Practice codes from the list, or empty"),
   practice_tested = yn("Produces evidence on a listed practice"),
   reports_cost = yn("Reports costs or profitability of the practice"),
   reports_adoption = yn("Reports adoption or its drivers"),
   reports_carbon_income = yn("Reports carbon credits, payments or benefit sharing"),
-  study_type = ellmer::type_enum(c("field_experiment", "farm_survey", "project_evaluation",
-                                   "economic_analysis", "modelling_only",
-                                   "review_or_meta_analysis", "other"), "Study type"),
-  evidence_quote = ellmer::type_string("Words copied from the abstract, or empty"),
-  reason = ellmer::type_string("One sentence"),
-  verdict = ellmer::type_enum(c("include", "exclude", "unsure"), "The model's own call")
+  study_type = list(type = "string", description = "Study type",
+                    enum = list("field_experiment", "farm_survey", "project_evaluation",
+                                "economic_analysis", "modelling_only",
+                                "review_or_meta_analysis", "other")),
+  evidence_quote = list(type = "string", description = "Words copied from the abstract, or empty"),
+  reason = list(type = "string", description = "One sentence"),
+  verdict = list(type = "string", enum = list("include", "exclude", "unsure"),
+                 description = "The model's own call")
+)
+SCREEN_SCHEMA <- list(type = "object", properties = SCREEN_PROPERTIES,
+                      required = as.list(names(SCREEN_PROPERTIES)),
+                      additionalProperties = FALSE)
+
+# What a record gets when the model's answer cannot be read: unsure, for a
+# person. Its tokens are still counted, because they are still billed.
+UNREADABLE_ANSWER <- list(
+  countries = "", in_africa = "unclear", practices = "", practice_tested = "unclear",
+  reports_cost = "unclear", reports_adoption = "unclear", reports_carbon_income = "unclear",
+  study_type = NA_character_, evidence_quote = "",
+  reason = "The model's answer could not be read; screen by hand.", verdict = "unsure"
 )
 
 #' The coded decision, applied in this order. The first rule that fires sets
@@ -190,12 +215,6 @@ decide <- function(d) {
   list(decision = sub(":.*$", "", rule), decision_rule = rule)
 }
 
-flatten <- function(res) {
-  res |>
-    dplyr::mutate(countries = vapply(countries, function(x) paste(unlist(x), collapse = "; "), ""),
-                  practices = vapply(practices, function(x) paste(unlist(x), collapse = "; "), ""))
-}
-
 # ---- progress you can watch ---------------------------------------------------
 
 write_progress <- function(state) {
@@ -212,12 +231,14 @@ write_progress <- function(state) {
     sprintf("Include:    %s", format(state$counts[["include"]], big.mark = ",")),
     sprintf("Unsure:     %s", format(state$counts[["unsure"]], big.mark = ",")),
     sprintf("Exclude:    %s", format(state$counts[["exclude"]], big.mark = ",")),
-    sprintf("Errors:     %s (retried on the next run)", state$errors),
-    sprintf("Cost so far (this run): about US$%.2f", state$cost),
+    sprintf("Errors:     %s (not billed; retried on the next run)", state$errors),
+    sprintf("Unreadable: %s (billed; kept as unsure, for a person)", state$unreadable),
+    sprintf("Cost so far (this run): US$%.2f of the US$%.2f cap", state$cost, state$max_usd),
     sprintf("Time left:  %s", if (is.na(left)) "estimating..." else
       paste0("about ", ceiling(left), " min")),
     "",
-    if (state$finished) "FINISHED." else "Running. This file refreshes after every batch."
+    if (isTRUE(state$capped)) "STOPPED: the next batch would pass the spending cap (--max-usd=)."
+    else if (state$finished) "FINISHED." else "Running. This file refreshes after every batch."
   )
   dir.create(dirname(FILE_SCREEN_PROGRESS), recursive = TRUE, showWarnings = FALSE)
   writeLines(lines, FILE_SCREEN_PROGRESS)
@@ -228,67 +249,129 @@ write_progress <- function(state) {
 
 # ---- screening ------------------------------------------------------------------
 
-#' Screen a set of prompts in parallel. When one answer cannot be read (the
-#' model now and then writes broken JSON), the whole call fails; the set is
-#' then split in half and each half tried again, down to single records, so
-#' one bad answer costs one record, not a batch. Returns the answers for the
-#' records that worked, and `keep`, TRUE for those and NA for the rest.
-screen_batch <- function(chat, prompts) {
-  res <- tryCatch(
-    ellmer::parallel_chat_structured(chat, prompts, SCREEN_TYPE, include_tokens = TRUE,
-                                     max_active = MAX_ACTIVE),
-    error = function(e) {
-      if (length(prompts) == 1) log_msg("record failed, retried next run: ",
-                                        substr(conditionMessage(e), 1, 120), level = "warn")
-      NULL
-    }
+#' One request to the OpenAI chat completions API for one record.
+openai_request <- function(system_prompt, prompt, model) {
+  body <- list(
+    model = model,
+    messages = list(list(role = "system", content = system_prompt),
+                    list(role = "user", content = prompt)),
+    response_format = list(type = "json_schema",
+                           json_schema = list(name = "screening", strict = TRUE,
+                                              schema = SCREEN_SCHEMA))
   )
-  if (!is.null(res)) return(list(res = res, keep = rep(TRUE, length(prompts))))
-  if (length(prompts) == 1) {
-    if (!UNREADABLE_TO_UNSURE) return(list(res = NULL, keep = NA))
-    # The same record fails the same way every time (the model's answer runs
-    # past the length cap or carries a broken character), so after one retry
-    # run it is kept as unsure, for a person, rather than lost.
-    return(list(res = tibble::tibble(
-      countries = list(character()), in_africa = "unclear", practices = list(character()),
-      practice_tested = "unclear", reports_cost = "unclear", reports_adoption = "unclear",
-      reports_carbon_income = "unclear", study_type = NA_character_, evidence_quote = "",
-      reason = "The model's answer could not be read; screen by hand.", verdict = "unsure",
-      input_tokens = 0, output_tokens = 0
-    ), keep = TRUE))
+  # Reasoning models (gpt-5 family) take no temperature, and get four times
+  # the answer length for their hidden reasoning.
+  if (grepl("^gpt-5", model)) {
+    body$max_completion_tokens <- MAX_ANSWER_TOKENS * 4
+  } else {
+    body$temperature <- 0
+    body$max_tokens <- MAX_ANSWER_TOKENS
   }
-  half <- seq_len(length(prompts)) <= length(prompts) / 2
-  a <- screen_batch(chat, prompts[half])
-  b <- screen_batch(chat, prompts[!half])
-  list(res = dplyr::bind_rows(a$res, b$res), keep = c(a$keep, b$keep))
+  polite_request("https://api.openai.com/v1/chat/completions") |>
+    httr2::req_auth_bearer_token(Sys.getenv("OPENAI_API_KEY")) |>
+    httr2::req_body_json(body) |>
+    httr2::req_timeout(120)
 }
 
-screen_records <- function(records, chat, model, out_file, label) {
+#' Read one response. Each answer is parsed on its own, so a broken answer
+#' costs its own record and nothing is sent twice. Returns the answer fields,
+#' the billed tokens, and a status: "ok", "unreadable" (billed, kept as
+#' unsure) or "failed" (the request itself failed: not billed, screened on
+#' the next run).
+read_answer <- function(resp) {
+  if (is.null(resp)) return(list(status = "failed"))
+  if (httr2::resp_status(resp) >= 400) {
+    msg <- tryCatch(httr2::resp_body_json(resp)$error$message, error = function(e) "")
+    log_msg("OpenAI HTTP ", httr2::resp_status(resp), ": ", substr(msg %||% "", 1, 150),
+            level = "warn")
+    return(list(status = "failed"))
+  }
+  body <- tryCatch(httr2::resp_body_json(resp), error = function(e) NULL)
+  u <- body$usage
+  cached <- u$prompt_tokens_details$cached_tokens %||% 0
+  tokens <- c(input_tokens = (u$prompt_tokens %||% 0) - cached, cached_input_tokens = cached,
+              output_tokens = u$completion_tokens %||% 0)
+  content <- body$choices[[1]]$message$content
+  a <- if (is.null(content)) NULL else
+    tryCatch(jsonlite::fromJSON(content, simplifyVector = FALSE), error = function(e) NULL)
+  if (is.null(a) || !all(names(SCREEN_PROPERTIES) %in% names(a))) {
+    return(list(status = "unreadable", answer = UNREADABLE_ANSWER, tokens = tokens))
+  }
+  a$countries <- paste(unlist(a$countries), collapse = "; ")
+  a$practices <- paste(unlist(a$practices), collapse = "; ")
+  a <- lapply(a[names(SCREEN_PROPERTIES)], function(x) {
+    if (is.null(x)) NA_character_ else as.character(x)
+  })
+  list(status = "ok", answer = a, tokens = tokens)
+}
+
+#' Screen a set of prompts in parallel. Returns one row per record whose
+#' request succeeded (its answer read, or kept as unsure when unreadable),
+#' and `failed`, TRUE for the records whose request failed.
+screen_batch <- function(system_prompt, prompts, model) {
+  reqs <- lapply(prompts, function(p) openai_request(system_prompt, p, model))
+  resps <- httr2::req_perform_parallel(reqs, on_error = "continue", progress = FALSE,
+                                       max_active = MAX_ACTIVE)
+  answers <- lapply(resps, function(r) read_answer(if (inherits(r, "httr2_response")) r else NULL))
+  failed <- vapply(answers, function(a) a$status == "failed", TRUE)
+  rows <- dplyr::bind_rows(lapply(answers[!failed], function(a) {
+    tibble::as_tibble(c(a$answer, as.list(a$tokens), list(answer_status = a$status)))
+  }))
+  list(res = rows, failed = failed)
+}
+
+#' Rows in the column order of the existing output file, so appended rows
+#' line up with its header (a person may have added or moved columns). QC
+#' columns a record had before it was screened again are put back.
+align_to_file <- function(rows, out_file, carry) {
+  if (!file.exists(out_file)) return(rows)
+  header <- names(readr::read_csv(out_file, n_max = 0, show_col_types = FALSE,
+                                  col_types = readr::cols(.default = readr::col_character())))
+  for (col in setdiff(header, names(rows))) rows[[col]] <- NA_character_
+  if (nrow(carry)) {
+    hit <- match(rows$record_id, carry$record_id)
+    for (col in intersect(QC_COLUMNS, names(carry))) {
+      rows[[col]] <- ifelse(is.na(hit), rows[[col]], carry[[col]][hit])
+    }
+  }
+  rows[, header]
+}
+
+screen_records <- function(records, system_prompt, model, out_file, label, max_usd,
+                           carry = tibble::tibble()) {
   price <- PRICES[[model]] %||% c(NA, NA)
   done_before <- read_csv_safe(out_file)
   if (!nrow(done_before)) done_before <- tibble::tibble(record_id = character(), decision = character())
   todo <- records[!records$record_id %in% done_before$record_id, ]
   state <- list(label = label, model = model, start = Sys.time(), total = nrow(records),
-                done = nrow(records) - nrow(todo), done_now = 0, errors = 0, cost = 0,
-                finished = FALSE,
+                done = nrow(records) - nrow(todo), done_now = 0, errors = 0, unreadable = 0,
+                cost = 0, max_usd = max_usd, capped = FALSE, finished = FALSE,
                 counts = c(include = sum(done_before$decision == "include"),
                            unsure = sum(done_before$decision == "unsure"),
                            exclude = sum(done_before$decision == "exclude")))
   write_progress(state)
   for (b in split(seq_len(nrow(todo)), ceiling(seq_len(nrow(todo)) / BATCH_SIZE))) {
+    # Stop before a batch that would pass the cap, judged on the cost per
+    # record so far.
+    per_record <- if (state$done_now > 0) state$cost / state$done_now else 0
+    if (state$cost + per_record * length(b) > max_usd) {
+      state$capped <- TRUE
+      log_msg(sprintf("Spending cap of US$%.2f reached; %d records left for the next run",
+                      max_usd, state$total - state$done), level = "warn")
+      break
+    }
     batch <- todo[b, ]
     prompts <- as.list(record_prompt(batch$title, batch$abstract))
-    ok <- screen_batch(chat, prompts)
-    failed <- is.na(ok$keep)
-    state$errors <- state$errors + sum(failed)
-    if (all(failed)) {
+    ok <- screen_batch(system_prompt, prompts, model)
+    state$errors <- state$errors + sum(ok$failed)
+    if (all(ok$failed)) {
       write_progress(state)
       next
     }
-    # A record whose answer could not be read is left out, and screened again
-    # on the next run.
-    batch <- batch[!failed, ]
-    res <- flatten(ok$res)
+    # A record whose request failed is left out, and screened on the next run.
+    batch <- batch[!ok$failed, ]
+    res <- ok$res
+    state$unreadable <- state$unreadable + sum(res$answer_status == "unreadable")
     res$no_abstract <- is.na(batch$abstract) | !nzchar(dplyr::coalesce(batch$abstract, ""))
     dec <- decide(res)
     rows <- dplyr::bind_cols(
@@ -296,21 +379,21 @@ screen_records <- function(records, chat, model, out_file, label) {
                           "in_wb2022", "wb_ref_id", "wb_status", "wb_positive",
                           "wb_extracted", "wb_africa", "abstract_source"),
                         names(batch))],
-      res, tibble::tibble(decision = dec$decision, decision_rule = dec$decision_rule,
-                          model = model, screened_on = as.character(Sys.Date()))
+      dplyr::select(res, -answer_status),
+      tibble::tibble(decision = dec$decision, decision_rule = dec$decision_rule,
+                     model = model, screened_on = as.character(Sys.Date()))
     )
-    cached <- if ("cached_input_tokens" %in% names(rows)) dplyr::coalesce(rows$cached_input_tokens, 0) else 0
-    rows$cost_usd <- (rows$input_tokens * price[1] + cached * price[3] +
+    rows$cost_usd <- (rows$input_tokens * price[1] + rows$cached_input_tokens * price[3] +
                         rows$output_tokens * price[2]) / 1e6
-    write_csv_safe(dplyr::mutate(rows, dplyr::across(dplyr::everything(), as.character)),
-                   out_file, append = TRUE)
+    rows <- dplyr::mutate(rows, dplyr::across(dplyr::everything(), as.character))
+    write_csv_safe(align_to_file(rows, out_file, carry), out_file, append = TRUE)
     state$done <- state$done + nrow(batch)
     state$done_now <- state$done_now + nrow(batch)
-    state$cost <- state$cost + sum(rows$cost_usd, na.rm = TRUE)
+    state$cost <- state$cost + sum(as.numeric(rows$cost_usd), na.rm = TRUE)
     for (k in names(state$counts)) state$counts[[k]] <- state$counts[[k]] + sum(rows$decision == k)
     write_progress(state)
   }
-  state$finished <- TRUE
+  state$finished <- !state$capped
   write_progress(state)
   read_csv_safe(out_file)
 }
@@ -319,7 +402,7 @@ screen_records <- function(records, chat, model, out_file, label) {
 
 flags <- parse_flags()
 model <- flag(flags, "model", SCREEN_MODEL_DEFAULT)
-UNREADABLE_TO_UNSURE <- isTRUE(flag(flags, "unreadable-to-unsure", FALSE))
+max_usd <- as.numeric(flag(flags, "max-usd", MAX_USD_DEFAULT))
 limit <- flag(flags, "limit", NULL)
 log_step(paste("Step 3: title and abstract screening with", model))
 
@@ -365,11 +448,32 @@ if (isTRUE(flag(flags, "calibrate", FALSE))) {
 if (!is.null(limit)) records <- utils::head(records, as.integer(limit))
 if (isTRUE(flag(flags, "refresh", FALSE)) && file.exists(out_file)) file.remove(out_file)
 
+# --refresh-filled: the records screened on their title alone that have an
+# abstract now are taken out of the output, so they are screened again; the
+# rest are left as they are. Their QC columns are carried over.
+carry <- tibble::tibble()
+if (isTRUE(flag(flags, "refresh-filled", FALSE)) && label == "full run") {
+  screened <- read_csv_safe(out_file)
+  has_abstract <- records$record_id[nzchar(dplyr::coalesce(records$abstract, ""))]
+  again <- screened$no_abstract %in% "TRUE" & screened$record_id %in% has_abstract
+  log_msg(sum(again), " records screened on their title alone have an abstract now")
+  if (isTRUE(flag(flags, "dry", FALSE))) {
+    records <- records[records$record_id %in% screened$record_id[again], ]
+  } else if (any(again)) {
+    carry <- screened[again, intersect(c("record_id", QC_COLUMNS), names(screened))]
+    write_csv_safe(screened[!again, ], out_file)
+  }
+}
+
 if (isTRUE(flag(flags, "dry", FALSE))) {
   # About four characters a token. The instructions are billed at the cached
   # price after the first call; each record and about 250 output tokens are
   # billed in full. Reasoning models (gpt-5 family) add hidden reasoning
   # tokens on top, so their real cost can be several times this.
+  # Records already screened are not sent again, so they are not counted.
+  if (!isTRUE(flag(flags, "refresh-filled", FALSE))) {
+    records <- records[!records$record_id %in% read_csv_safe(out_file)$record_id, ]
+  }
   sys_tok <- nchar(system_prompt) / 4
   rec_tok <- sum(nchar(record_prompt(records$title, records$abstract)) / 4)
   est <- function(p) (nrow(records) * sys_tok * p[3] + rec_tok * p[1] + nrow(records) * 250 * p[2]) / 1e6
@@ -380,14 +484,8 @@ if (isTRUE(flag(flags, "dry", FALSE))) {
   quit(save = "no")
 }
 
-# A normal answer is about 120 tokens. The cap stops the rare runaway answer
-# (the model looping inside a string) within seconds instead of minutes.
-chat <- ellmer::chat_openai(
-  system_prompt = system_prompt, model = model,
-  params = if (grepl("^gpt-5", model)) ellmer::params(max_tokens = MAX_ANSWER_TOKENS * 4)
-           else ellmer::params(temperature = 0, max_tokens = MAX_ANSWER_TOKENS)
-)
-result <- screen_records(records, chat, model, out_file, label)
+if (!nzchar(Sys.getenv("OPENAI_API_KEY"))) stop("OPENAI_API_KEY is not set in .Renviron")
+result <- screen_records(records, system_prompt, model, out_file, label, max_usd, carry)
 
 if (label == "calibration") {
   r <- dplyr::left_join(result, dplyr::distinct(records, record_id, calibration_set), by = "record_id")
