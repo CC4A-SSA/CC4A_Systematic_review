@@ -22,6 +22,8 @@
 #        --model=      the OpenAI model (default SCREEN_MODEL_DEFAULT)
 #        --limit=      screen at most this many records, for a test run
 #        --refresh     screen again records already in the output
+#        --unreadable-to-unsure  keep records whose answer cannot be read as
+#                      unsure (for a person) instead of retrying them again
 #
 # Run with:
 #   Rscript R/03_screen/screen_scope.R --dry
@@ -65,6 +67,11 @@ MAX_ABSTRACT_CHARS <- 3000
 # Longest answer allowed, in tokens (reasoning models get four times this,
 # for their hidden reasoning).
 MAX_ANSWER_TOKENS <- 700
+
+# Set by --unreadable-to-unsure: a record whose answer cannot be read is kept
+# as unsure instead of being left for the next run. Use it on a retry run,
+# once the failures have proved to repeat.
+UNREADABLE_TO_UNSURE <- FALSE
 
 # Calibration: how many 2022 human includes become examples in the prompt
 # (they are then left out of the recall test), and how many random records a
@@ -174,6 +181,7 @@ decide <- function(d) {
     outcome_no ~ "exclude: no cost, adoption or carbon income evidence",
     d$study_type == "other" ~ "exclude: not a field, survey, evaluation or economic study",
     d$in_africa == "yes" & d$practice_tested == "yes" & outcome_yes & primary ~ "include",
+    startsWith(d$reason, "The model's answer could not be read") ~ "unsure: model answer unreadable",
     TRUE ~ "unsure: something unclear"
   )
   # Without an abstract the model sees only a title: never exclude on that alone.
@@ -236,7 +244,19 @@ screen_batch <- function(chat, prompts) {
     }
   )
   if (!is.null(res)) return(list(res = res, keep = rep(TRUE, length(prompts))))
-  if (length(prompts) == 1) return(list(res = NULL, keep = NA))
+  if (length(prompts) == 1) {
+    if (!UNREADABLE_TO_UNSURE) return(list(res = NULL, keep = NA))
+    # The same record fails the same way every time (the model's answer runs
+    # past the length cap or carries a broken character), so after one retry
+    # run it is kept as unsure, for a person, rather than lost.
+    return(list(res = tibble::tibble(
+      countries = list(character()), in_africa = "unclear", practices = list(character()),
+      practice_tested = "unclear", reports_cost = "unclear", reports_adoption = "unclear",
+      reports_carbon_income = "unclear", study_type = NA_character_, evidence_quote = "",
+      reason = "The model's answer could not be read; screen by hand.", verdict = "unsure",
+      input_tokens = 0, output_tokens = 0
+    ), keep = TRUE))
+  }
   half <- seq_len(length(prompts)) <= length(prompts) / 2
   a <- screen_batch(chat, prompts[half])
   b <- screen_batch(chat, prompts[!half])
@@ -272,7 +292,7 @@ screen_records <- function(records, chat, model, out_file, label) {
     res$no_abstract <- is.na(batch$abstract) | !nzchar(dplyr::coalesce(batch$abstract, ""))
     dec <- decide(res)
     rows <- dplyr::bind_cols(
-      batch[, intersect(c("record_id", "doi", "title", "publication_year", "found_by",
+      batch[, intersect(c("record_id", "doi", "title", "abstract", "publication_year", "found_by",
                           "in_wb2022", "wb_ref_id", "wb_status", "wb_positive",
                           "wb_extracted", "wb_africa", "abstract_source"),
                         names(batch))],
@@ -299,6 +319,7 @@ screen_records <- function(records, chat, model, out_file, label) {
 
 flags <- parse_flags()
 model <- flag(flags, "model", SCREEN_MODEL_DEFAULT)
+UNREADABLE_TO_UNSURE <- isTRUE(flag(flags, "unreadable-to-unsure", FALSE))
 limit <- flag(flags, "limit", NULL)
 log_step(paste("Step 3: title and abstract screening with", model))
 
