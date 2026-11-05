@@ -21,7 +21,7 @@ What it does: The review's progress, step by step, as one interactive page.
      values over its years and seasons, and what its costs include.
   2. The practices: Pete Steward's practice vocabulary.
   3. The OpenAlex search.
-  4. Title and abstract screening: tables by search and by defined practice, and the
+  4. Title and abstract screening: a chart of the screening by defined practice, and the
      person's QC of the model. Records
      with no abstract anywhere are left out for now.
   5. Next steps: full texts through Zotero, then extraction and its QC.
@@ -318,6 +318,7 @@ n_checked <- nrow(practice_check)
 n_check_kept <- sum(practice_check$record_id %in% screen$record_id[screen$group == "included"])
 n_check_excluded <- sum(screen$group == "practice_check")
 check_cost <- sum(as.numeric(read_cols(FILE_PRACTICE_CHECK, "cost_usd")$cost_usd))
+n_no_practice <- n_distinct(screen_long$record_id[screen_long$practice == "none"])
 fmt <- function(x) format(x, big.mark = ",")
 ```
 
@@ -667,67 +668,68 @@ for (sc in names(SCOPE_LABELS)) {
 
 The 2022 data are not enough on their own, so the literature was searched again in OpenAlex on `r search_date`: **`r overall$searches` searches**, one for each of `r n_search_groups` keyword groups and the three outcome blocks (adoption; costs, returns and incentives; carbon finance), each combined with the Africa terms and limited to papers from 1990 to 2026. The search terms are in `docs/synthesis/key-words.xlsx`. Together the searches returned `r fmt(overall$hits)` hits; many papers are found by more than one search, which leaves **`r fmt(nrow(records))` unique records**.
 
-Section 4 shows the hits of each search next to what the screening kept from it.
+Section 4 follows these hits through the screening.
 
 ## 4. Title and abstract screening
 
 Every record was screened on its title and abstract by a GPT model (gpt-4.1-mini), following the ERA screening workflow. The model answers one question per criterion: is the study in Africa, does it study one of the practices, does it report costs, adoption or carbon income, and what kind of study is it. Code then turns the answers into include, exclude or unsure, so every decision names the criterion that set it. Papers the 2022 reviewers included were shown to the model as examples. OpenAlex holds no abstract for some records; `R/01_search/fill_abstracts.R` found **`r fmt(abstracts_found)`** of them elsewhere (Europe PMC, Semantic Scholar, Crossref and the publishers' own pages), and those records were screened on their abstract.
 
-Across all searches: **`r fmt(overall$included)` included** for full text, `r fmt(overall$excluded)` excluded and `r fmt(overall$unsure)` unsure, for a person, out of `r fmt(overall$screened)` records screened. The person's QC decisions replace the model's throughout. The two tables below count the same records two ways. A record found by several searches, or naming several practices, counts in each row, so the rows add up to more than the totals. Sort or filter by any column.
+**Practice check.** The screening model was shown the `r n_search_groups` broader search keyword groups, not the definitions in section 2, so it also kept studies of, for example, plain manure or fertiliser rates, general irrigation or intercropping, which no defined practice covers. The `r fmt(n_checked)` included records whose title and abstract named no defined practice (`R/03_screen/tag_practices.R` looks for each practice's synonyms) were checked again by the same GPT model, against each practice's definition and what does not count (`R/03_screen/classify_practices.R`, US$`r sprintf("%.2f", check_cost)`). `r fmt(n_check_kept)` fit an in scope practice and stay included; **`r fmt(n_check_excluded)` were excluded**. A person's QC decision stands over the model's throughout.
 
-### By search
+### From search to included
 
-One row per OpenAlex search: what it returned, how many of its records were screened, and how many were included.
+**`r fmt(overall$hits)` OpenAlex hits** → `r fmt(nrow(records))` unique records → `r fmt(overall$screened)` screened on title and abstract → **`r fmt(overall$included)` included** for full text, `r fmt(overall$unsure)` unsure for a person, `r fmt(overall$excluded)` excluded.
 
-```{r search-table}
-#' Screening counts per group of rows, a record counted once per group.
-tally <- function(d, ...) {
-  d |>
-    distinct(..., record_id, .keep_all = TRUE) |>
-    group_by(...) |>
-    summarise(Screened = n(), Excluded = sum(group %in% EXCLUDE_GROUPS),
-              Unsure = sum(group == "unsure"), Included = sum(group == "included"),
-              .groups = "drop") |>
-    mutate(`% included` = round(100 * Included / pmax(Screened, 1)))
+The chart splits the screened records by the defined practice they study (the practice they name, or the one the practice check found). A record studying two practices counts under both. `r fmt(n_no_practice)` screened records studied none of the defined practices and are not shown; `r if (included_none == 0) "all of them were excluded" else paste0(fmt(included_none), " of them stay included, for the full-text screen to judge")`. Choose an outcome in the menu to see the records its searches found; hover for the numbers.
+
+```{r practice-chart, fig.height = 7}
+STATUS <- c(included = "Included", unsure = "Unsure", excluded = "Excluded")
+STATUS_COLOURS <- c(included = "#31a354", unsure = "#fdae6b", excluded = "#d9d9d9")
+shown <- setdiff(names(PRACTICE_NAMES), "none")
+axis_labels <- ifelse(PRACTICE_SCOPE[shown] == "In scope", PRACTICE_NAMES[shown],
+                      paste0(PRACTICE_NAMES[shown], " (", tolower(PRACTICE_SCOPE[shown]), ")"))
+bars <- bind_rows(
+  mutate(screen_long, outcome = "all"),
+  screen_long
+) |>
+  distinct(outcome, practice, record_id, .keep_all = TRUE) |>
+  filter(practice %in% shown) |>
+  mutate(status = case_when(group == "included" ~ "included", group == "unsure" ~ "unsure",
+                            TRUE ~ "excluded")) |>
+  count(outcome, practice, status) |>
+  complete(outcome, practice = shown, status = names(STATUS), fill = list(n = 0L)) |>
+  group_by(outcome, practice) |>
+  mutate(screened = sum(n)) |>
+  ungroup() |>
+  mutate(label = factor(axis_labels[practice], levels = rev(axis_labels)))
+outcomes <- c(all = "All outcomes", OUTCOME_LABELS)
+fig <- plot_ly(height = 620)
+for (o in names(outcomes)) for (st in names(STATUS)) {
+  d <- filter(bars, outcome == o, status == st)
+  fig <- add_bars(fig, data = d, x = ~n, y = ~label, orientation = "h", name = STATUS[[st]],
+                  legendgroup = st, showlegend = o == "all", visible = o == "all",
+                  marker = list(color = STATUS_COLOURS[[st]],
+                                line = list(color = "#ffffff", width = 1)),
+                  text = ~paste0(label, "<br>", STATUS[[st]], ": ", fmt(n), " of ",
+                                 fmt(screened), " screened"),
+                  hoverinfo = "text", textposition = "none")
 }
-by_search <- screen |>
-  select(record_id, found_by, group) |>
-  tidyr::separate_rows(found_by, sep = ";[[:space:]]*") |>
-  rename(search_id = found_by) |>
-  tally(search_id)
-search_labels <- read_cols(FILE_SEARCH_COUNTS, c("search_id", "practice_label"))
-search_table <- counts |>
-  left_join(search_labels, by = "search_id") |>
-  left_join(by_search, by = "search_id") |>
-  transmute(`Search (keyword group)` = practice_label, Outcome = OUTCOME_LABELS[outcome],
-            `OpenAlex hits` = hits, Screened, Excluded, Unsure, Included, `% included`) |>
-  mutate(across(Screened:`% included`, ~ coalesce(.x, 0)))
-datatable(search_table, rownames = FALSE, class = "compact stripe hover", width = "100%",
-          filter = "top", options = list(pageLength = 15, dom = "tip")) |>
-  formatRound(c("OpenAlex hits", "Screened", "Excluded", "Unsure", "Included"), digits = 0)
-```
-
-### By defined practice
-
-The searches were written for `r n_search_groups` keyword groups, which are broader than the defined practices in section 2 and do not line up with them one to one, so OpenAlex hits cannot be split by practice. Instead each record is put under the defined practices it actually names: `R/03_screen/tag_practices.R` looks for every practice's synonyms (`catalogues/vocab_practices.csv`) in the record's title and abstract. A record naming none is shown as *`r NO_PRACTICE`*.
-
-**Practice check.** The screening model was shown the `r n_search_groups` broader keyword groups, not the definitions in section 2, so it also kept studies of, for example, plain manure or fertiliser rates, general irrigation or intercropping, which no defined practice covers. The `r fmt(n_checked)` included records that named no practice were therefore checked again by the same GPT model, this time against each practice's definition and what does not count (`R/03_screen/classify_practices.R`, US$`r sprintf("%.2f", check_cost)`). `r fmt(n_check_kept)` fit an in scope practice and stay included, under the practice the model found; **`r fmt(n_check_excluded)` were excluded**, as fitting no defined practice or only one not taken forward or out of scope. Records a person included at QC were left as the person decided. The counts above already include this check.
-
-```{r practice-table}
-practice_table <- screen_long |>
-  tally(practice, outcome) |>
-  arrange(match(practice, names(PRACTICE_NAMES)), outcome) |>
-  transmute(Practice = PRACTICE_NAMES[practice], Scope = PRACTICE_SCOPE[practice],
-            Outcome = OUTCOME_LABELS[outcome], Screened, Excluded, Unsure, Included,
-            `% included`)
-datatable(practice_table, rownames = FALSE, class = "compact stripe hover", width = "100%",
-          filter = "top", options = list(pageLength = 15, dom = "tip")) |>
-  formatRound(c("Screened", "Excluded", "Unsure", "Included"), digits = 0)
+n_traces <- length(STATUS)
+buttons <- lapply(seq_along(outcomes), function(i) list(
+  method = "restyle", label = outcomes[[i]],
+  args = list("visible", as.list(rep(seq_along(outcomes) == i, each = n_traces)))))
+layout(fig, barmode = "stack", bargap = 0.25,
+       xaxis = list(title = "Records screened", gridcolor = "#eeeeee", zeroline = FALSE),
+       yaxis = list(title = "", ticksuffix = "  "),
+       legend = list(orientation = "h", x = 0, y = 1.08, traceorder = "normal"),
+       updatemenus = list(list(type = "dropdown", x = 1, y = 1.12, xanchor = "right",
+                               yanchor = "bottom", buttons = buttons, showactive = TRUE)),
+       margin = list(l = 10, r = 10, t = 80, b = 40))
 ```
 
 ### Checking the model: the person's QC
 
-A person checked three samples of the model's decisions from the title and abstract, with the model's decision in view: a random 50 of its includes, a random 100 of its excludes, and every record it was unsure about that had an abstract. Their decisions replace the model's in the tables above.
+A person checked three samples of the model's decisions from the title and abstract, with the model's decision in view: a random 50 of its includes, a random 100 of its excludes, and every record it was unsure about that had an abstract. Their decisions replace the model's in the chart above.
 
 ```{r qc}
 qc_rows <- screen |> filter(checked)
