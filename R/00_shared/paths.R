@@ -83,6 +83,9 @@ FILE_SCREEN_PROMPT   <- file.path(DIR_CATALOGUES, "screening_prompt.md")
 # Each searched record tagged with the defined practices (vocab_practices.csv)
 # its title or abstract names, by R/03_screen/tag_practices.R.
 FILE_RECORD_PRACTICES <- file.path(DIR_SCREEN, "record_practices.csv")
+# Included records checked against the practice definitions by a GPT model,
+# by R/03_screen/classify_practices.R.
+FILE_PRACTICE_CHECK <- file.path(DIR_SCREEN, "practice_check.csv")
 # Rewritten after every batch while screening runs: open it to watch progress.
 FILE_SCREEN_PROGRESS <- file.path(DIR_SCREEN, "progress.txt")
 FILE_SCREEN_HUMAN_SAMPLE <- file.path(DIR_REVIEW, "screen_calibration_for_person.csv")
