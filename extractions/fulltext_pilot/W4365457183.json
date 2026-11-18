@@ -1,0 +1,15 @@
+{
+  "record_id": "W4365457183",
+  "rules_version": "0.1.0",
+  "decision": "exclude",
+  "exclude_reason": "no_defined_practice",
+  "practices_confirmed": ["multistrata_shade_trees"],
+  "outcomes_found": [],
+  "study_design": "soil_sampling_land_use_comparison",
+  "countries": ["MOZ"],
+  "pages_read": 19,
+  "notes": "Mozambique (Gorongosa) shade-grown coffee agroforestry as forest restoration: coffee under native shade trees is multistrata_shade_trees (a12), out_of_scope, not trees_in_farmlands (the tag was wrong). Preprint (Research Square). It would also fail no_outcome_data: only soil carbon stocks, microbial biomass and respiration; payment for ecosystem services is mentioned in the abstract as a possibility only, with no payment, price, credit or revenue, and no costs, returns or adoption figures.",
+  "cost_return": [],
+  "adoption": [],
+  "carbon": []
+}

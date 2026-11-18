@@ -98,9 +98,22 @@ screen_calibration_file <- function(model) {
 }
 
 # Step 4 fetch
+# The included records with their defined practices and outcome folder, by
+# R/04_fetch/list_included.R. Read by the fetch and the Zotero upload.
+FILE_INCLUDED      <- file.path(DIR_FULLTEXT, "included_records.csv")
 FILE_FETCH_INDEX   <- file.path(DIR_FULLTEXT, "fulltext_index.csv")
+# Each record's Zotero item, attachment and collections, by
+# R/04_fetch/zotero_upload.R, so a stopped upload resumes.
+FILE_ZOTERO_ITEMS  <- file.path(DIR_FULLTEXT, "zotero_items.csv")
 
 # Step 5 extract
+# Full-text extraction rounds, one JSON per paper (docs/synthesis/
+# fulltext_extraction_rules.md): the 30-paper pilot, and the five 2022 World
+# Bank papers re-extracted under rules 0.2.0 with their comparison to 2022.
+DIR_EXTRACT_PILOT  <- file.path(CC4A_ROOT, "extractions", "fulltext_pilot")
+DIR_EXTRACT_V02    <- file.path(CC4A_ROOT, "extractions", "fulltext_v02")
+FILE_PILOT_PAPERS  <- file.path(DIR_EXTRACT_PILOT, "pilot_papers.csv")
+FILE_COMPARE_WB2022 <- file.path(DIR_EXTRACT_V02, "compare_wb2022.csv")
 FILE_EXTRACT_RAW   <- file.path(DIR_EXTRACT, "extracted_verbatim.csv")
 FILE_EXTRACT_AUDIT <- file.path(DIR_EXTRACT, "verification_report.csv")
 

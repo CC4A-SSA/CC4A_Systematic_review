@@ -1,0 +1,15 @@
+{
+  "record_id": "W7212950519",
+  "rules_version": "0.1.0",
+  "decision": "exclude",
+  "exclude_reason": "no_outcome_data",
+  "practices_confirmed": [],
+  "outcomes_found": [],
+  "study_design": "cross_sectional_survey",
+  "countries": ["NGA"],
+  "pages_read": 9,
+  "notes": "Survey of 268 pastoralist household heads in three grazing reserves (Dauchi, Gongoshi, Sorau), Adamawa State, 2025. Grazing reserves could fall under rotational_grazing (subtype deferred / seasonal reserves), and the questionnaire lists rotational grazing, cover-crop planting and silvopasture, but these are only rated. All results are Likert-type mean scores of perceived management effectiveness (Table 2, p7: e.g. rotational grazing 1.94, planting of cover crops 2.41, silvopasture 1.92) and mean ratings of financing sources (Table 3, p8). Neither is an adoption rate (share/number adopting), an adoption driver, a cost/return or carbon income; the authors state the results are perceptions, not effects (p8). Borderline: a reviewer could read the mean 'application' scores as an adoption proxy; the scale is not defined in the paper (no anchors given), so they cannot be converted to a rate.",
+  "cost_return": [],
+  "adoption": [],
+  "carbon": []
+}

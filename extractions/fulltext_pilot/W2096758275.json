@@ -1,0 +1,19 @@
+{
+  "record_id": "W2096758275",
+  "rules_version": "0.1.0",
+  "decision": "exclude",
+  "exclude_reason": "no_outcome_data",
+  "practices_confirmed": [
+    "cover_crops"
+  ],
+  "outcomes_found": [],
+  "study_design": "household_survey",
+  "countries": [
+    "BEN"
+  ],
+  "pages_read": 11,
+  "notes": "Benin, 2005 survey of 306 households plus focus groups on yam-based systems with Mucuna pruriens and Aeschynomene histrix intercropped with maize, biomass incorporated before yam (green manure / cover crop, fits cover_crops; not CA; crop_livestock_integration is out_of_scope). The only quantified results are the frequency and 'constraint degree of severity' of perceived constraints (Table 2 and Table 3, page 6). It reports no adoption rate, no adoption determinants model, no cost or return values (fertilizer cost appears only as a named constraint), and no carbon values. Judgement call: perceived-constraint rankings were not treated as adoption drivers. If the team decides constraint severity counts as an adoption driver ('other' measure), this paper would be included with about 17 household-level and 9 focus-group constraint rows.",
+  "cost_return": [],
+  "adoption": [],
+  "carbon": []
+}

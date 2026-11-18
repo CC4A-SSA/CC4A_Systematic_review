@@ -1,0 +1,17 @@
+{
+  "record_id": "W2773742978",
+  "rules_version": "0.1.0",
+  "decision": "exclude",
+  "exclude_reason": "no_defined_practice",
+  "practices_confirmed": [],
+  "outcomes_found": [],
+  "study_design": "teaching_case_study_on_station_trials",
+  "countries": [
+    "ETH"
+  ],
+  "pages_read": 23,
+  "notes": "ILRI teaching case study on a research strategy for selecting Napier grass accessions (field trials at Debre Zeit/Ethiopia and a 10-site SSA network, then a sheep feeding trial). The contrast is between forage genotypes (accessions), not feed_mgmt against a basal diet, so no defined practice is studied as an intervention. It would also fail no_outcome_data: only agronomic, nutritive and liveweight data; no costs/returns, adoption or carbon values. Text layer only read in full (page images could not be rendered via the Read tool; pdftoppm missing).",
+  "cost_return": [],
+  "adoption": [],
+  "carbon": []
+}

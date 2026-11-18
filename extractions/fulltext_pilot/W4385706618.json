@@ -1,0 +1,15 @@
+{
+  "record_id": "W4385706618",
+  "rules_version": "0.1.0",
+  "decision": "exclude",
+  "exclude_reason": "no_defined_practice",
+  "practices_confirmed": [],
+  "outcomes_found": [],
+  "study_design": "chronosequence_plot_inventory_carbon_stocks",
+  "countries": ["CMR"],
+  "pages_read": 9,
+  "notes": "Cameroon (Adamawa) 5-, 15- and 22-year-old mango (Mangifera indica) stands against savannah. These are tree-crop orchards with a woody understorey, not annual crops grown under scattered trees or in alleys, so not trees_in_farmlands; closest is a tree-crop system (multistrata_shade_trees / a12 family, out_of_scope). Judgement call for a person to confirm. Even if the practice were accepted, the 'ecological service payment' values (Table 5, page 5, VE Dollar/ha: 1277.04 to 3309.69 for the stands vs 990.07 for savannah) are not carbon income: they are the carbon STOCK (Mg CO2eq/ha) multiplied by an assumed 10 USD/t CO2eq taken from Ecosystem Marketplace 2016 (page 4). No payment is made; it is a hypothetical stock valuation (modelled, secondary price). No costs, returns or adoption figures.",
+  "cost_return": [],
+  "adoption": [],
+  "carbon": []
+}

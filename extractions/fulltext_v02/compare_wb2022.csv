@@ -1,0 +1,6 @@
+record_id,paper,rows_2022,values_matched,why_the_rest_differ
+6134030,"Fatumah et al. 2021, Uganda, tillage systems on common bean",6,6,All 2022 values found; CC4A also has two values 2022 left out.
+6137948,"Obiri et al. 2007, Ghana, herbaceous legume fallows",35,34,"The one mismatch is a 2022 error (Table 6 columns swapped, a cost entered as a return, 1,119,298 typed as 119,298). CC4A extracts every year for every treatment."
+6135863,"Tufa et al. 2022, Ethiopia, biochar and NPS fertiliser",51,17,Different comparisons: 2022 also used the NPS-only plot as a control; CC4A compares every treatment with the paper's control plot.
+6135671,"Ejigu et al. 2021, Ethiopia, compost with Urea/NPSB",27,7,"Different comparisons: 2022 compared each compost rate with the same fertiliser rate without compost; CC4A compares every treatment with the paper's control (no compost, no fertiliser)."
+6134332,"MacCarthy et al. 2020, Ghana, biochar with N fertiliser",144,11,"108 of the 2022 values come from Supplementary Table S2, not in the PDF; 2022 also compared fertiliser rates with each other."

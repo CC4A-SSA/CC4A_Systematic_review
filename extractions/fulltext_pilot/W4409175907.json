@@ -1,0 +1,17 @@
+{
+  "record_id": "W4409175907",
+  "rules_version": "0.1.0",
+  "decision": "exclude",
+  "exclude_reason": "no_defined_practice",
+  "practices_confirmed": [],
+  "outcomes_found": [],
+  "study_design": "laboratory_analysis_plus_farmer_scoring",
+  "countries": [
+    "ETH"
+  ],
+  "pages_read": 6,
+  "notes": "Technical note comparing farmers' qualitative scores of five commercial wheat bran types (Tigray, Ethiopia; 30 dairy farmers) with laboratory quality parameters. Wheat bran supplementation is the background use, not an intervention studied against a basal diet, so it does not meet feed_mgmt as an intervention. It would also fail no_outcome_data: no costs/returns, adoption or carbon values (only feed chemistry, rank scores and Spearman correlations).",
+  "cost_return": [],
+  "adoption": [],
+  "carbon": []
+}

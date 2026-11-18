@@ -1,6 +1,6 @@
 ---
 title: "CC4A cost and adoption review: progress"
-subtitle: "The 2022 World Bank data, the OpenAlex search, title and abstract screening, and what comes next"
+subtitle: "The 2022 World Bank data, the OpenAlex search, title and abstract screening, full texts and data extraction"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
   html_document:
@@ -24,7 +24,9 @@ What it does: The review's progress, step by step, as one interactive page.
   4. Title and abstract screening: a chart of the screening by defined practice, and the
      person's QC of the model. Records
      with no abstract anywhere are left out for now.
-  5. Next steps: full texts through Zotero, then extraction and its QC.
+  5. Full texts and data extraction: PDFs found, the test of the extraction
+     agents against the 2022 data, the 30-paper pilot and its values.
+  6. Next steps.
 Reads: data/wb_nbs_extraction_2022_cc4a.xlsx           (sheet extracted_cc4a)
        catalogues/vocab_practices.csv                   the practice vocabulary
        outputs/01_search/search_counts.csv              hits per search
@@ -35,6 +37,10 @@ Reads: data/wb_nbs_extraction_2022_cc4a.xlsx           (sheet extracted_cc4a)
        outputs/03_screen/record_practices.csv           the defined practices
                                                         each record names, from
                                                         R/03_screen/tag_practices.R
+       outputs/04_fulltext/fulltext_index.csv           PDFs found
+       extractions/fulltext_pilot/                      the 30-paper pilot
+       extractions/fulltext_v02/                        the five 2022 papers and
+                                                        compare_wb2022.csv
 Writes: the rendered HTML, docs/reports/progress_report.html when built with
   R/progress_report/render_progress_report.R
 Flags: none. Knit in RStudio, or run R/progress_report/render_progress_report.R.
@@ -322,6 +328,61 @@ n_no_practice <- n_distinct(screen_long$record_id[screen_long$practice == "none"
 fmt <- function(x) format(x, big.mark = ",")
 ```
 
+```{r extraction-data}
+# Full texts found by the fetch.
+fetch <- read.csv(FILE_FETCH_INDEX, colClasses = "character")
+n_pdf <- sum(fetch$status == "ok")
+n_pdf_missing <- overall$included - n_pdf
+
+#' One extraction file: the paper's decision and the cost and return rows,
+#' every column as text. Pilot files (rules 0.1) and later ones share these
+#' columns.
+COST_SHOWN <- c("outcome", "outcome_unit", "practice", "treatment_name", "control_name",
+                "value_trt", "value_con", "measurement_year", "data_type",
+                "extraction_method", "page", "locator", "quote")
+read_extraction <- function(f) {
+  ex <- jsonlite::fromJSON(f, simplifyVector = TRUE)
+  rows <- ex$cost_return
+  cost <- if (is.data.frame(rows) && nrow(rows)) {
+    as_tibble(lapply(setNames(COST_SHOWN, COST_SHOWN), function(k)
+      if (k %in% names(rows)) as.character(rows[[k]]) else NA_character_))
+  } else tibble()
+  list(paper = tibble(record_id = ex$record_id, decision = ex$decision,
+                      exclude_reason = if (is.null(ex$exclude_reason)) NA_character_
+                                       else ex$exclude_reason,
+                      cost_return = NROW(ex$cost_return), adoption = NROW(ex$adoption),
+                      carbon = NROW(ex$carbon)),
+       cost = mutate(cost, record_id = ex$record_id, .before = 1))
+}
+read_round <- function(dir) {
+  x <- lapply(list.files(dir, "\\.json$", full.names = TRUE), read_extraction)
+  list(papers = bind_rows(lapply(x, `[[`, "paper")), cost = bind_rows(lapply(x, `[[`, "cost")))
+}
+
+pilot_papers <- read.csv(FILE_PILOT_PAPERS, colClasses = "character")
+pilot_round <- read_round(DIR_EXTRACT_PILOT)
+pilot <- left_join(pilot_round$papers,
+                   select(pilot_papers, record_id, outcome_folder, title), by = "record_id")
+
+v02 <- read_round(DIR_EXTRACT_V02)
+v02_cost <- v02$cost
+cmp <- read.csv(FILE_COMPARE_WB2022, colClasses = c(record_id = "character"))
+# The two papers where both extractions made the same comparisons.
+same <- cmp[cmp$record_id %in% c("6134030", "6137948"), ]
+same_matched <- sum(same$values_matched)
+same_2022 <- sum(same$rows_2022)
+
+all_cost <- bind_rows(
+  mutate(pilot_round$cost, Round = "Pilot"),
+  mutate(v02_cost, Round = "2022 test")
+) |>
+  transmute(Round, Record = record_id, Outcome = outcome, Unit = outcome_unit,
+            Practice = practice, Treatment = treatment_name, Control = control_name,
+            `Value (treatment)` = value_trt, `Value (control)` = value_con,
+            Year = measurement_year, Data = gsub("_", " ", data_type),
+            `Read from` = extraction_method, Page = page, Where = locator, Quote = quote)
+```
+
 ## Where the review is
 
 ```{r at-a-glance, results = "asis"}
@@ -334,8 +395,11 @@ steps <- list(
   c("3", "Title and abstract screening", "Done, checked by a person",
     paste0(fmt(overall$included), " included, ", fmt(overall$excluded), " excluded, ",
            fmt(overall$unsure), " unsure, for a person")),
-  c("4", "Full texts through Zotero", "Next", "Fetch the PDFs of the included records"),
-  c("5", "Data extraction and QC", "After that", "Extract into the template, then check a sample")
+  c("4", "Full texts through Zotero", "In progress",
+    paste0(fmt(n_pdf), " of ", fmt(overall$included), " PDFs found")),
+  c("5", "Data extraction", "Piloted, checked by a person",
+    paste0(nrow(pilot_papers), " pilot papers and ", nrow(cmp),
+           " papers tested against the 2022 data"))
 )
 cards <- vapply(steps, function(s) sprintf(
   '<div class="step %s"><div class="step-n">%s</div><div><b>%s</b><div class="step-status">%s</div><div class="step-note">%s</div></div></div>',
@@ -757,12 +821,63 @@ wb <- screen |> filter(wb_africa_included)
 - **Unsure.** Of the `r sum(qc_rows$qc_sample == "decide unsure")` unsure records with an abstract, the person included `r sum(qc_rows$qc_sample == "decide unsure" & qc_rows$qc == "include")`.
 - **Against the 2022 reviewers.** The search found `r nrow(wb)` African papers the 2022 reviewers included. The screening keeps `r sum(wb$final != "exclude")` of them (`r round(100 * mean(wb$final != "exclude"))`%) for full text or for a person to decide.
 
-## 5. Next steps
+## 5. Full texts and data extraction
 
-1. **Full texts through Zotero.** Send the `r fmt(overall$included)` included records to a shared Zotero library through the Zotero web API, by DOI where there is one (`r fmt(overall$included_doi)` have a DOI). Zotero then fetches the PDFs it can find; `r fmt(overall$included_oa)` are open access according to OpenAlex. What Zotero cannot find becomes a short list to get through library access.
-2. **Full-text screening.** Check each PDF against the same criteria with the full paper in hand, recording a reason for every exclusion.
-3. **Data extraction.** Extract into the template (`docs/synthesis/extraction_template.xlsx`), as piloted on five papers: costs, returns and adoption with their units, years and the cost items they include, each value with its page and a verbatim quote.
-4. **Extraction QC.** A second person extracts a random sample of papers independently; the two are compared field by field, and values are checked against their quotes.
+### Full texts
+
+The `r fmt(overall$included)` included records went to a shared Zotero library, which fetched the PDFs it could find. **`r fmt(n_pdf)` PDFs** are in hand; the other `r fmt(n_pdf_missing)` still need a copy, through Zotero's "Find Available PDFs" or library access.
+
+### How the data are extracted
+
+Each paper is read in full by a Claude Code agent, which follows the written extraction rules (`docs/synthesis/fulltext_extraction_rules.md`, now version 0.2.0). The agent first decides whether the paper stays in, against the same criteria as the screening, and then extracts three kinds of data: **costs and returns** (in the 2022 World Bank template's outcomes and cost columns), **adoption** and **carbon finance**. Every value carries its page, where on the page it sits (table, row and column, or figure panel), a verbatim quote, and whether it was field-measured, reported in a survey or modelled. Values are taken as printed; the agent does not calculate. A script (`py/check_extraction.py`) then confirms that every quote is on its page and every number is in its quote, and lists the values read from figures for a person to check by eye.
+
+### Testing against the 2022 World Bank extraction
+
+To test the agents against people, five papers from the 2022 World Bank data were extracted again without the agents seeing the 2022 values, and the two extractions were compared value by value. Where both extractions made the same comparisons (the Uganda tillage and Ghana legume fallow papers), **`r same_matched` of `r same_2022` values from 2022 (`r round(100 * same_matched / same_2022)`%) were found in the new extraction**; the one mismatch is an error in the 2022 data. In the other three papers the two extractions compared different treatments, and in one most of the 2022 values come from a supplementary table that is not in the PDF; the table gives the reason for each paper.
+
+```{r compare-2022}
+cmp |>
+  left_join(count(v02_cost, record_id, name = "rows_cc4a"), by = "record_id") |>
+  transmute(Paper = paper, `Values in 2022` = rows_2022,
+            `Found in the new extraction` = values_matched,
+            `Values in the new extraction` = rows_cc4a,
+            `Why the rest differ` = why_the_rest_differ) |>
+  knitr::kable(align = "lrrrl")
+```
+
+The test also changed the rules, which are now at version 0.2.0: practice columns carrying the vocabulary's sub-practices (section 2), every year or season as its own row, the paper's own control in factorial trials, and the 2022 definitions of gross margin and net return.
+
+### The 30-paper pilot
+
+Thirty included records, spread across the practices and the three outcome blocks, were extracted as a pilot. The agents kept **`r sum(pilot$decision == "include")`** and excluded `r sum(pilot$decision == "exclude")` on the full text (`r sum(pilot$exclude_reason == "no_outcome_data", na.rm = TRUE)` reported no cost, adoption or carbon data; `r sum(pilot$exclude_reason == "no_defined_practice", na.rm = TRUE)` did not study a defined practice), so the screening's includes still need the full-text check. From the papers kept they extracted **`r fmt(sum(pilot$cost_return))` cost and return values, `r fmt(sum(pilot$adoption))` adoption values and `r fmt(sum(pilot$carbon))` carbon finance values**. A person checked the extractions against the PDFs. Extraction took about 11 minutes of agent time per paper (9 to 15), against a median of 30 minutes per paper for the manual extraction in 2022.
+
+```{r pilot-table}
+pilot |>
+  arrange(desc(decision), outcome_folder, record_id) |>
+  transmute(Record = record_id, Title = title, `Searched for` = outcome_folder,
+            Decision = ifelse(decision == "include", "Kept",
+                              paste0("Excluded: ", gsub("_", " ", sub("^no_", "no ", exclude_reason)))),
+            `Costs and returns` = cost_return, Adoption = adoption, `Carbon finance` = carbon) |>
+  DT::datatable(rownames = FALSE, filter = "top",
+                options = list(pageLength = 10, dom = "tip", autoWidth = TRUE))
+```
+
+### The extracted cost and return values
+
+Every cost and return value from the pilot and the 2022 test, `r fmt(nrow(all_cost))` in all. Search or filter any column; the quote is the text the value was read from.
+
+```{r cost-values}
+all_cost |>
+  DT::datatable(rownames = FALSE, filter = "top",
+                options = list(pageLength = 10, scrollX = TRUE, dom = "tip",
+                               columnDefs = list(list(width = "320px", targets = ncol(all_cost) - 1))))
+```
+
+## 6. Next steps
+
+1. **Full texts.** Find PDFs for the `r fmt(n_pdf_missing)` included records that have none yet.
+2. **Extraction at scale.** Run the agents over every included record with a PDF, under rules 0.2.0, starting with five new cost papers checked against their PDFs before the rest.
+3. **Extraction QC.** A person checks every value read from a figure and a random sample of papers against the PDF; the checking script runs on everything.
 
 <style>
 .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 8px 0 18px; }
@@ -786,4 +901,4 @@ wb <- screen |> filter(wb_africa_included)
 
 ---
 
-*Built by `R/progress_report/progress_report.Rmd` from `data/wb_nbs_extraction_2022_cc4a.xlsx`, `outputs/01_search/` and `outputs/03_screen/screen_scope.csv`. Section 1: African studies only, practice mapping in `catalogues/map_wb2022_practices.csv`, values as extracted in 2022 in each paper's own currency and prices.*
+*Built by `R/progress_report/progress_report.Rmd` from `data/wb_nbs_extraction_2022_cc4a.xlsx`, `outputs/01_search/`, `outputs/03_screen/screen_scope.csv`, `outputs/04_fulltext/fulltext_index.csv` and `extractions/`. Section 1: African studies only, practice mapping in `catalogues/map_wb2022_practices.csv`, values as extracted in 2022 in each paper's own currency and prices.*

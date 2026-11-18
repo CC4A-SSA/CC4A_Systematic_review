@@ -1,0 +1,19 @@
+{
+  "record_id": "W2028736724",
+  "rules_version": "0.1.0",
+  "decision": "exclude",
+  "exclude_reason": "no_outcome_data",
+  "practices_confirmed": [
+    "feed_mgmt"
+  ],
+  "outcomes_found": [],
+  "study_design": "case_study_on_station_and_demonstration_farm",
+  "countries": [
+    "ERI"
+  ],
+  "pages_read": 3,
+  "notes": "Short conference case study (2 pages + citation page) of forage introduction and evaluation for cut-and-carry irrigated dairying in the Eritrean central highlands. Planted forages fed cut-and-carry fit feed_mgmt, but the paper reports no costs or returns, no adoption figure (only 'interested farmers' took material and one demonstration farm; 'the introduction and adoption' is asserted without numbers), and no carbon income.",
+  "cost_return": [],
+  "adoption": [],
+  "carbon": []
+}

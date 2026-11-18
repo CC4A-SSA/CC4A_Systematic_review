@@ -1,0 +1,15 @@
+{
+  "record_id": "W2913673912",
+  "rules_version": "0.1.0",
+  "decision": "exclude",
+  "exclude_reason": "no_outcome_data",
+  "practices_confirmed": ["trees_in_farmlands"],
+  "outcomes_found": [],
+  "study_design": "tree_inventory_plus_secondary_yield_statistics",
+  "countries": ["BFA"],
+  "pages_read": 14,
+  "notes": "Burkina Faso parklands (trees_in_farmlands, subtype parkland). Reports tree canopy cover, tree cover and a crop 'trade-off' in kg/ha (crop area lost under canopy x Ministry of Agriculture mean yields; Figure 5, page 10). No costs or returns in money, no adoption figures, no carbon payment, price or credit: carbon payments under REDD+ are only recommended (page 11). Yield losses in kg/ha are not a World Bank economic outcome.",
+  "cost_return": [],
+  "adoption": [],
+  "carbon": []
+}

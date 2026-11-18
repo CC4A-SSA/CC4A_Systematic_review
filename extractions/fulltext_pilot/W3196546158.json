@@ -1,0 +1,15 @@
+{
+ "record_id": "W3196546158",
+ "rules_version": "0.1.0",
+ "decision": "exclude",
+ "exclude_reason": "no_outcome_data",
+ "practices_confirmed": ["biochar"],
+ "outcomes_found": [],
+ "study_design": "experiment_on_farm",
+ "countries": ["BFA"],
+ "pages_read": 16,
+ "notes": "Field trial at Kadomba (Houet, Burkina Faso), 2020, RCBD, 4 reps: biochar from invasive aquatic plants (5 t/ha, alone or mixed), biochar + poultry manure, NPK 150 kg/ha, vs no-input control. Only biochar/manure chemistry and maize growth parameters to 37-40 days after sowing (height, collar diameter, leaf number); no yield. The abstract and conclusion say IAP biochar 'has a lower operational cost than other fertilizers', but no cost, price, return or other economic value is given anywhere; no adoption or carbon income data. Biochar itself qualifies (feedstock stated, cone kiln), so the paper fails only on outcome data.",
+ "cost_return": [],
+ "adoption": [],
+ "carbon": []
+}

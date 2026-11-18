@@ -34,3 +34,7 @@ Thumbs.db
 
 # Excel lock files, left behind while a workbook is open
 ~$*
+
+# Python
+.venv/
+__pycache__/
