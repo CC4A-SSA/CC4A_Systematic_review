@@ -1,0 +1,15 @@
+{
+  "record_id": "W2517752990",
+  "rules_version": "0.1.0",
+  "decision": "exclude",
+  "exclude_reason": "no_defined_practice",
+  "practices_confirmed": ["multistrata_shade_trees"],
+  "outcomes_found": [],
+  "study_design": "plot_inventory_carbon_stocks",
+  "countries": ["GHA"],
+  "pages_read": 13,
+  "notes": "Ghana shaded cacao agroforestry: cacao under shade trees is multistrata_shade_trees (a12), out_of_scope in the vocabulary, not trees_in_farmlands (the tag was wrong). It would also fail no_outcome_data: it reports only aboveground carbon stocks (Mg C/ha) and tree diversity; REDD+ income is discussed but no payment, price, credit or revenue is given, and there are no costs, returns or adoption figures.",
+  "cost_return": [],
+  "adoption": [],
+  "carbon": []
+}

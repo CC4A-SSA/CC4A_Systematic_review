@@ -11,6 +11,11 @@ ANTHROPIC_API_KEY=
 # Unpaywall needs an email address on every request. Use your work address.
 UNPAYWALL_EMAIL=
 
+# The shared Zotero group the included records go into: a key with write
+# access to it (zotero.org/settings/keys/new) and the number in the group's URL.
+ZOTERO_API_KEY=
+ZOTERO_GROUP_ID=
+
 # Optional. OpenAlex gives faster and more reliable service to requests that
 # name a contact address (the polite pool).
 OPENALEX_EMAIL=

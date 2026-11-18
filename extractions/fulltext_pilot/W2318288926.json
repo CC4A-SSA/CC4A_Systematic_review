@@ -1,0 +1,15 @@
+{
+  "record_id": "W2318288926",
+  "rules_version": "0.1.0",
+  "decision": "exclude",
+  "exclude_reason": "no_defined_practice",
+  "practices_confirmed": [],
+  "outcomes_found": [],
+  "study_design": "modelled_bioeconomic",
+  "countries": ["DZA", "COD", "ETH", "KEN", "LBY", "MAR", "MOZ", "NGA", "ZAF", "TUN"],
+  "pages_read": 13,
+  "notes": "EPIC crop model coupled to a multi-objective evolutionary algorithm; decision variables are total N fertiliser amount/splitting and irrigation amount/scheduling (Table 2, p5). Neither is a defined practice: plain fertiliser rate increases are excluded under nutrient_mgmt_b (the business-as-usual pathway), and irrigation amount optimisation is not in the vocabulary. The paper does report modelled gross margin ('benefit', $/ha) along Pareto fronts in Figures 2-10, so it would otherwise pass the outcome criterion (data_type modelled). No rows extracted.",
+  "cost_return": [],
+  "adoption": [],
+  "carbon": []
+}

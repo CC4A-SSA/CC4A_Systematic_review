@@ -1,0 +1,17 @@
+{
+  "record_id": "W7135222435",
+  "rules_version": "0.1.0",
+  "decision": "exclude",
+  "exclude_reason": "no_defined_practice",
+  "practices_confirmed": [],
+  "outcomes_found": [],
+  "study_design": "household_survey",
+  "countries": [
+    "SSD"
+  ],
+  "pages_read": 2,
+  "notes": "Abstract-only publication (page 2: 'This is an abstract-only publication. The complete research paper ... is available upon request.'). The intervention is 'Sustainable rice cultivation techniques (SRCTs)', never defined; nothing shows it is SRI as the vocabulary defines it (components not stated), so the first failing criterion is no_defined_practice. It would also fail no_outcome_data: the abstract says financial returns were collected but reports only a 20% yield increase and 15% water-use reduction, no cost/return, adoption or carbon value. Credibility concern: published in 'African Fisheries Science (Fisheries/Aquatic)' with a 2013 date but a Zenodo DOI; full text would need to be requested.",
+  "cost_return": [],
+  "adoption": [],
+  "carbon": []
+}

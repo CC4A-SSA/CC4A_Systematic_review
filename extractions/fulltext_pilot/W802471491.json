@@ -1,0 +1,17 @@
+{
+ "record_id": "W802471491",
+ "rules_version": "0.1.0",
+ "decision": "exclude",
+ "exclude_reason": "no_outcome_data",
+ "practices_confirmed": [],
+ "outcomes_found": [],
+ "study_design": "case_study_project",
+ "countries": [
+  "BDI"
+ ],
+ "pages_read": 13,
+ "notes": "Burundi (Gitega) case study of the PIP integrated farm planning approach (project Fanning the Spark). Africa: yes. Defined practice: borderline pass - the paper is about scaling ISFM (nutrient_mgmt_b), but ISFM is promoted as one component of farm planning and is never measured as a contrast. Fails outcome criterion: no own value for costs/returns, adoption or carbon income of a defined practice. Values present but not usable: (1) PIP coverage 'a coverage of the village on average of 30 % after the first competition, and 80 % after the second competition' (p.9) and 80 % of households with a PIP (p.11) - adoption of the farm-planning extension approach, not of ISFM; (2) 'only 13 % of farmers apply ISFM' in Gitega (p.6) - cited from Lyambabaje et al. 2012 (secondary); (3) Table 2 (p.11) bean seed/yield ratios for improved varieties Nyawera/Bishaza with small KCl (52 PIs, farmer recall) - physical yield, improved_varieties (out_of_scope) with a small fertiliser dose; no monetary outcome; (4) counts of farmers buying improved bean seed (8) and potato seed (5) - improved varieties; (5) Fig. 1 wheat gross margins - CASCAPE project, Ethiopia, unpublished, cited. Flag for team: if PIP coverage should count as ISFM adoption, the paper would switch to include with two adoption rate rows (context within_project).",
+ "cost_return": [],
+ "adoption": [],
+ "carbon": []
+}

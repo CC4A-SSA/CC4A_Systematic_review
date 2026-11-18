@@ -97,7 +97,7 @@ driver and benefit sharing rows need no season classification.
 | 1 | `R/01_search` | Each practice in `docs/synthesis/key-words.xlsx` is searched once per outcome block (practice AND geography AND outcome), in titles and abstracts, inside the publication window. Hits are counted for every combination, records downloaded, and each record checked against the references already screened in the 2022 World Bank NbS extraction. Each row remembers which search found it. |
 | 2 | `R/02_dedup` | The result set collapses to one row per study. DOIs settle most of it; a fuzzy title comparison catches the rest. Rows that lose are not deleted, they are registered with the reason. |
 | 3 | `R/03_screen` | A model reads title and abstract and answers whether the study is worth downloading: does it carry a number, is the subject an adaptation practice, is it set in Africa, is it inside the window. Code then audits the answer and sends the doubtful cases to a person. |
-| 4 | `R/04_fetch` | Full text, chased through Unpaywall, then the DOI, then the publisher. Downloads are inspected before they are trusted, because a login page saved as a PDF is still a PDF. |
+| 4 | `R/04_fetch` | Full text, chased through Unpaywall, then the DOI, then the publisher, and put into the shared Zotero library by practice and outcome. Downloads are inspected before they are trusted, because a login page saved as a PDF is still a PDF. |
 | 5 | `R/05_extract` | A model reads the paper and returns parameter rows in the paper's own words: the number, the unit as written, the page, the sentence. Code then looks for each sentence on the page it was attributed to. Anything it cannot find is discarded. |
 | 6 | `R/06_harmonise` | Verified rows are mapped onto the controlled vocabularies and the units are made comparable. Lookup tables do most of it, a cache does the rest, and one batched model call handles the remainder. |
 | 7 | `R/07_publish` | The Excel parameter database in schema order, a provenance sheet, a sheet of rows worth a second look, the bill for the run, and the score against the gold set. |
@@ -172,7 +172,9 @@ inside the clone.
 
 | Script | What it is |
 |---|---|
-| `fetch_fulltext.R` | Works down four routes per record: the open access location Unpaywall reports for the DOI, the open access URL the search already carried, the DOI itself, then the publisher's landing page. A download survives only if the magic bytes say PDF, `pdftools` can open it, it holds real text rather than scanned images, and it runs past a single page. A record is labelled paywalled only once all four routes have failed, never on the strength of one refusal. `--retry` revisits failures, `--dry` reports the plan. |
+| `list_included.R` | Lists the included records (a person's QC decision overrides the model's; the practice check's exclusions are dropped) with their defined practices and one outcome folder each: Adoption, Costs, returns and incentives, Carbon finance, Multiple outcomes (two or more) or Outcome unclear, from what the screening model read in the abstract. Writes `outputs/04_fulltext/included_records.csv`. |
+| `fetch_fulltext.R` | Gets the free full texts of the included records: the open access locations Unpaywall reports for the DOI, the open access URL the search already carried, the DOI itself, then the PDF link the publisher's page declares. A download survives only if the magic bytes say PDF, `pdftools` can open it, it holds real text rather than scanned images, and it runs past a single page. Needs `UNPAYWALL_EMAIL`. `--retry` revisits failures, `--limit=` for a test, `--dry` counts. Picks up where it left off. |
+| `zotero_upload.R` | Puts the included records into the shared Zotero group (`ZOTERO_API_KEY`, `ZOTERO_GROUP_ID`) as one item each, in folders CC4A included full text / practice / outcome folder, and uploads the PDFs found. Items still without a PDF are tagged `cc4a_no_pdf_yet` for Zotero desktop's Find Available PDFs and then a person. Keeps `outputs/04_fulltext/zotero_items.csv`, so nothing is added twice. `--dry` prints the folders, `--limit=` for a test, `--pdfs-only` uploads new PDFs only. |
 
 ### R/05_extract
 
@@ -180,6 +182,16 @@ inside the clone.
 |---|---|
 | `extract_verbatim.R` | Handles one paper. The page tagged text goes out once, and each parameter family (cost, adoption, carbon share) is asked about after it, so the provider's cache carries the document and the several calls cost barely more than one. Answers come back with a page and a sentence attached, and code then hunts for that sentence: on the cited page, elsewhere in the paper, or nowhere. The last case is thrown out and survives only in the audit file. A list of figures that can never be a parameter (a programme budget, an exchange rate, a yield) is enforced in code. The untouched model response is saved per record, so a disappointing run can be diagnosed without being paid for twice. |
 | `run_corpus.R` | Drives the extractor across the corpus, taking only records that passed screening and yielded readable text. `--dry` measures real page sizes and prices the run before any of it is spent, `--practice=` narrows it, `--limit=` trials it, `--redo` forces a repeat. A broken PDF is caught and logged rather than allowed to end the run. |
+
+### py/ (full-text extraction)
+
+Full texts are extracted by Claude Code agents following `docs/synthesis/fulltext_extraction_rules.md`, one JSON per paper under `extractions/<round>/`. These scripts support that work; run them with `uv run python py/<script>.py`.
+
+| Script | What it is |
+|---|---|
+| `select_pilot.py` | Chooses the pilot papers: papers with a PDF, spread over the outcome folders and the defined practices, seeded so the same run gives the same papers. Writes `extractions/fulltext_pilot/pilot_papers.csv`. |
+| `page_text.py` | Prints the text of PDF pages, so quotes are copied from the text layer, never retyped. |
+| `check_extraction.py` | Checks every extracted row: the quote is on its page, every number is in its quote, a table value is its cell's first number, and (rules 0.2 on) each cost and return column holds an allowed value. Gathers the round into one workbook with a problems sheet and a sheet of figure values for a person to check. `--out` names the workbook. |
 
 ### R/06_harmonise
 
