@@ -192,6 +192,7 @@ Status as on the Crosswalk: **Go** (7 TNC practices, consolidated into 6 Allianc
 | Comparator | Same field, no rock dust (same fertiliser) |
 | Dose | Rock type, rate (t/ha), particle size, years since application |
 | Expected | Thin. A lower-confidence bounded layer or route D is the likely outcome; record it plainly |
+| CIMMYT status (22 Nov 2026) | Preliminary model (19 Nov basis). Production response is fitted to GAIA on-farm **lime** trials (4,214 plot comparisons in ET, RW, TZ and ZM) as a function of acidity neutralised. No basalt trial; **no stress-season or hazard term**, so it gives no adaptation evidence. Summary: `Literature/ERW/2026-11-20 - ERW methods and code - CIMMYT (Bisrat, Jordan) - log.md` |
 
 ---
 
