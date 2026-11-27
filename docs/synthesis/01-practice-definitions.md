@@ -33,6 +33,14 @@ ERA codes several practices per treatment; the ERA practice combination is the c
 
 ## 2. Practices in scope
 
+> **Practice register v0.2 (2 Nov 2026; amended 24 Nov 2026, issue #23).** The
+> agreed register (TNC and the Alliance, `CC4A-SSA/cc4adapt`) now sets scope.
+> `catalogues/crosswalk_register.csv` maps each code here to its register ID,
+> and `py/check_register.py` fails when the two drift apart. Changes: §2.6
+> nutrient management dropped (register C1.3); §2.13 shaded perennials added
+> (C3.3); fodder banks counted under G1.1 (§2.8); feed management narrowed to
+> G1.1 (§2.9); biochar feedstock recorded (§2.2).
+
 Status as on the Crosswalk: **Go** (7 TNC practices, consolidated into 6 Alliance rows), **Go – caveated** (1), **enhancement or Alliance addition** (5, counting DSR and SRI as one row). Three are not taken forward (§3).
 
 ### 2.1 Alternate wetting and drying (AWD) — pilot
@@ -59,7 +67,7 @@ Status as on the Crosswalk: **Go** (7 TNC practices, consolidated into 6 Allianc
 | System | Rainfed and irrigated cropland; responsive soils (acidic, degraded, low SOC, coarse-textured) |
 | Includes | Field application of pyrolysed biomass, alone or co-applied with fertiliser where the control receives the same fertiliser |
 | Excludes | Pot and incubation studies (mechanism only, never effect sizes); ash (`b74`); biochar used as feed additive. **Charcoal fines and pit- or Kon-Tiki-kiln char are included** where the source says what they are made from — they are what smallholders actually use |
-| Boundary cases | *Biochar–compost blends and biochar-based fertilisers*: `partial_bundle` unless the contrast isolates the char. *Historical char / kiln-site and forest-conversion chronosequences*: observational design, extract with `design = observational`. *Biochar in paddy rice*: biochar recipe; record water regime as a moderator |
+| Boundary cases | *Biochar–compost blends and biochar-based fertilisers*: `partial_bundle` unless the contrast isolates the char. *Historical char / kiln-site and forest-conversion chronosequences*: observational design, extract with `design = observational`. *Biochar in paddy rice*: biochar recipe; record water regime as a moderator. *Forest-residue feedstock*: register v0.2 C2.3 excludes it; extracted, with `feedstock = forest_residue` as the flag, not excluded |
 | Comparator | Same field and fertiliser regime, no biochar |
 | Dose | Rate (t/ha), feedstock, production method (pit, drum, Kon-Tiki, retort, industrial), pyrolysis temperature, particle size, application year(s) and years since application. **Record `dose_farm_feasible`:** at roughly 25–35 % char yield, 10 t/ha needs 30–40 t of feedstock, far more than a maize field's stover (much of which is fed to livestock). Farm-feasible rates are typically low single-digit t/ha, or banded application |
 | Outcomes | Crop yield; soil moisture or plant-available water (mechanism evidence); pH (moderator) |
@@ -106,7 +114,13 @@ Status as on the Crosswalk: **Go** (7 TNC practices, consolidated into 6 Allianc
 | Comparator | Same system with bare fallow between seasons |
 | Dose | Species, biomass produced (t DM/ha), termination method and timing |
 
-### 2.6 Nutrient management — scenario (b)
+### 2.6 Nutrient management — scenario (b) — **dropped (register v0.2, C1.3)**
+
+**Not taken forward since 24 Nov 2026**: dropped by both sides in October 2026
+(register v0.2, C1.3). Screened out and counted like §3; records tagged only
+with it are not extracted (`extractions/fulltext/scope_excluded.csv`). Rows
+extracted before the change are kept, flagged, in `batch_NNN_out_of_scope.xlsx`.
+The definition below is kept as it was screened.
 
 | | |
 |---|---|
@@ -126,7 +140,7 @@ Status as on the Crosswalk: **Go** (7 TNC practices, consolidated into 6 Allianc
 | Crosswalk | Parklands and Intercropping (alley cropping) — both Go, consolidated into Alliance row 12, *Trees in farmlands*, with the TNC sub-pathway tag retained |
 | era-aom | Parklands `a8`, scattered trees `a8.1`, FMNR `a1` (as a route to parklands); alley cropping `a3`, `a4`, `a4.1`, `a14` |
 | Includes | Crops grown under scattered or regularly spaced trees; crops in alleys between tree rows |
-| Excludes | Multistrata / shade tree crops (`a12` — dropped by TNC; open joint item); boundary plantings (`a9`, `a10`); agroforestry fallows (`a19.x`); prunings as a stand-alone amendment (`a15–a18`) |
+| Excludes | Shade trees in coffee, cocoa and tea (→ shaded perennials, §2.13); boundary plantings (`a9`, `a10`); agroforestry fallows (`a19.x`); prunings as a stand-alone amendment (`a15–a18`) |
 | Boundary cases | *Under-canopy vs outside-canopy designs*: common for parklands; `design = observational`, record distance from trunk. *Alley cropping with prunings applied*: this is the practice; record pruning fate |
 | Tag | `subtype = parkland` or `alley` on every record |
 | Comparator | Same crop in open field, beyond tree influence |
@@ -137,7 +151,7 @@ Status as on the Crosswalk: **Go** (7 TNC practices, consolidated into 6 Allianc
 
 | | |
 |---|---|
-| Crosswalk | Fodder banks — Go. Alliance row 16 |
+| Crosswalk | Fodder banks — Go. Alliance row 16. **Register v0.2: G1.1** — dropped as a separate register row (C3.7) on 13 Oct 2026; reserve-function forage is counted under G1.1. The code is kept so rows already extracted stay valid |
 | era-aom | Agroforestry fodders added `d17.3` or substituted `d18.3`; crop and non-crop fodders `d17.1`, `d17.2` where from a reserved plot; with `d20` cut and carry |
 | Definition | **Defined by function:** a plot planted and reserved to supply feed in the dry season or feed gap, whether woody or herbaceous |
 | Includes | Planted fodder trees or shrubs (for example *Calliandra*, *Leucaena*, *Gliricidia*, *Sesbania*) cut and fed; **reserved herbaceous legume or grass banks** (the original West African fodder banks were fenced *Stylosanthes* plots) grazed or cut in the dry season |
@@ -153,8 +167,10 @@ Status as on the Crosswalk: **Go** (7 TNC practices, consolidated into 6 Allianc
 |---|---|
 | Crosswalk | Feed Management (renamed from "Feed Management and Additives" on the SharePoint copy) — Go – enhancement. Alliance row 18 |
 | era-aom | Crop and non-crop fodders added `d17.1`, `d17.2` or substituted `d18.1`, `d18.2`; feed processing `d22.1`, `d22.2`; concentrates `d22.3`; improved planted forages `d11`, `d12` in mixed systems |
-| Includes | Forage quality improvement, conserved forage (hay, silage), crop-residue treatment, balanced supplementation, planted forages fed year-round in mixed and intensive systems |
+| Register | **v0.2 G1.1**, improved on-farm forage (agreed in principle): improved grasses, legumes, fodder shrubs or trees grown on the farm, fed cut and carry or conserved. Excludes feed additives and bought-in concentrates as the main lever |
+| Includes | Forage quality improvement, conserved forage (hay, silage), crop-residue treatment, supplementation with feed grown on the farm (fodder legumes, fodder trees), planted forages fed year-round in mixed and intensive systems |
 | Excludes | **Methane-reducing feed additives** (3-NOP, seaweed, oils for methane) — redefined out; reserved fodder plots of any kind (→ fodder banks) |
+| Boundary cases | *Bought-in concentrates as the main lever*: sub-practice `supplementation_bought_in`, extracted as a partial bundle and not pooled. *Crop-residue treatment*: in, but open for a register decision (G1.1 is silent on it) |
 | Comparator | Basal or conventional diet — `h60`, `h61` |
 | Dose | Feed type, kg DM/head/day, diet share, season |
 | Outcomes | Milk, liveweight gain, dry-season feed deficit, mortality |
@@ -196,6 +212,18 @@ Status as on the Crosswalk: **Go** (7 TNC practices, consolidated into 6 Allianc
 
 ---
 
+### 2.13 Shaded perennials (coffee, cocoa, tea) — added 24 Nov 2026
+
+| | |
+|---|---|
+| Register | **v0.2 C3.3**, agreed (mapping open). Was `multistrata_shade_trees`, out of scope, until register v0.2 |
+| era-aom | `a12` |
+| Includes | Shade trees in perennial tree-crop systems (coffee, cocoa, tea), planted or retained, including multistrata agroforestry |
+| Excludes | Shade trees with livestock (→ silvopasture); scattered trees on annual cropland (→ trees in farmlands) |
+| Tag | Sub-practice `coffee`, `cocoa` or `tea` |
+| Comparator | The same crop unshaded or under minimal shade |
+| Search | Own practice block (`synthesis/03`), run 24 Nov 2026; the records screened out before as "no listed practice" that name coffee, cocoa, cacao, shade trees or multistrata were screened again |
+
 ## 3. Not taken forward
 
 Screened **out** at title/abstract. Count them in the screening log so the exclusion is visible; do not extract.
@@ -206,7 +234,9 @@ Screened **out** at title/abstract. Count them in the screening log so the exclu
 | Improved fallow | `b60.x`, `a19.x` | Rotational clearing makes above-ground carbon transient |
 | Riparian buffers | none | Hydrologic, sub-kilometre mechanism; cannot be produced at 5 arcmin |
 
-Also not in scope though they will turn up: multistrata / shade tree crops (`a12`), crop–livestock integration as a named practice, solar-powered irrigation, water harvesting (`b33`, `b70` etc.), improved varieties (`b4`, `b5`).
+Also not taken forward since register v0.2: nutrient management, scenario (b) (§2.6).
+
+Also not in scope though they will turn up: crop–livestock integration as a named practice, solar-powered irrigation, water harvesting (`b33`, `b70` etc.), improved varieties (`b4`, `b5`).
 
 ---
 

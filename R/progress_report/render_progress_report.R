@@ -7,6 +7,9 @@
 #        outputs/01_search/search_counts.csv              (through the Rmd)
 #        outputs/01_search/search_records_vs_wb2022.csv   (through the Rmd)
 #        outputs/03_screen/screen_scope.csv               (through the Rmd)
+#        catalogues/crosswalk_register.csv                (through the Rmd)
+#        extractions/fulltext/ status, batch workbooks and scope_excluded.csv
+#                                                         (through the Rmd)
 # Writes: docs/reports/progress_report.html
 # Flags: none
 #

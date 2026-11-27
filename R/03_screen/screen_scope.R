@@ -25,6 +25,9 @@
 #        --refresh-filled  screen again the records screened on their title
 #                      alone that have an abstract now (from
 #                      R/01_search/fill_abstracts.R); their QC columns are kept
+#        --rescreen=   a CSV with a record_id column: screen those records
+#                      again (e.g. after a practice comes into scope); their QC
+#                      columns are kept, the rest of the output is left as it is
 #        --max-usd=    stop before a batch would take the run past this many
 #                      US dollars (default MAX_USD_DEFAULT)
 #
@@ -465,7 +468,29 @@ if (isTRUE(flag(flags, "refresh-filled", FALSE)) && label == "full run") {
   }
 }
 
+# --rescreen=<csv>: the listed records are taken out of the output, so they
+# are screened again with the current prompt; their QC columns are carried over.
+rescreen <- flag(flags, "rescreen", NULL)
+if (!is.null(rescreen) && label == "full run") {
+  ids <- read_csv_safe(rescreen)$record_id
+  screened <- read_csv_safe(out_file)
+  again <- screened$record_id %in% ids
+  log_msg(sum(again), " records to screen again, from ", rescreen)
+  if (isTRUE(flag(flags, "dry", FALSE))) {
+    keep_ids <- c(screened$record_id[again],
+                  setdiff(records$record_id, screened$record_id))
+    records <- records[records$record_id %in% keep_ids, ]
+    screened <- screened[!again, ]
+    write_csv_safe(screened, file.path(tempdir(), "screened_minus_rescreen.csv"))
+    out_file_dry <- file.path(tempdir(), "screened_minus_rescreen.csv")
+  } else if (any(again)) {
+    carry <- screened[again, intersect(c("record_id", QC_COLUMNS), names(screened))]
+    write_csv_safe(screened[!again, ], out_file)
+  }
+}
+
 if (isTRUE(flag(flags, "dry", FALSE))) {
+  if (exists("out_file_dry")) out_file <- out_file_dry
   # About four characters a token. The instructions are billed at the cached
   # price after the first call; each record and about 250 output tokens are
   # billed in full. Reasoning models (gpt-5 family) add hidden reasoning

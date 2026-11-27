@@ -12,14 +12,38 @@ checks
   check_fields   (rules 0.2 on) each cost_return column holds an allowed
                  value: outcome name, Yes/No/NA cost items, year codes
 A row whose quote is not found is dropped from the clean tables and kept on
-the problems sheet. Figure values are listed for a person to check.
+the problems sheet. Figure values are listed for a person to check. Where a second reader
+(an agent that did not extract the paper) has checked a paper against its
+PDF, its findings from qc/<record_id>.json go on the qc sheet: rows it
+thinks are wrong (error) or open to judgement (query), and values it thinks
+were missed, each with a yellow person_decision column; its verdict goes on
+the papers sheet.
+Rows whose practices are all out of scope in catalogues/vocab_practices.csv
+(e.g. nutrient_mgmt_b, dropped in practice register v0.2) are taken out of
+the workbook and written to a second one, <name>_out_of_scope.xlsx, with the
+same sheets; the extraction files keep them. So are all the rows of a paper
+that is out of scope as a whole (paper_out_of_scope: its confirmed practices
+are all out of scope and no row names one in scope), rows coded "other" too.
+Rows a person dropped at the
+check (a "dropped" field giving the reason) go on the dropped sheet and are
+not checked; their second-reader findings are left off. Each data sheet runs
+record_id, title, row; where and what (country, product); the practices; the
+outcome with its values; costs; page and quote; the checks last.
+The batches (--batch) and the PDFs are in the shared folder (py/paths.py,
+CC4A_SHARED_DIR); the pilot and fulltext_v02 rounds are in git.
 Reads: extractions/<round>/<record_id>.json
+       extractions/<round>/qc/<record_id>.json (when there)
        outputs/04_fulltext/pdf/<record_id>.pdf
+       outputs/04_fulltext/included_records.csv (titles)
+       catalogues/vocab_practices.csv (sub-practices, scope)
 Writes: extractions/<round>/checked.xlsx   papers, cost_return, adoption,
-          carbon, to_check (figure and picture-table values), problems
+          carbon, to_check (figure and picture-table values), qc, problems
+        extractions/<round>/checked_out_of_scope.xlsx   cost_return, adoption,
+          carbon rows whose practices are all out of scope
 Run with:
   uv run python py/check_extraction.py --dir extractions/fulltext_v02
   uv run python py/check_extraction.py --dir extractions/fulltext_v02 --record 6134332
+  uv run python py/check_extraction.py --batch 1      batch_001/batch_001.xlsx
 """
 
 import argparse
@@ -34,9 +58,9 @@ import openpyxl
 from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 from openpyxl.styles import Font, PatternFill
 
-ROOT = Path(__file__).resolve().parents[1]
-PDF_DIR = ROOT / "outputs" / "04_fulltext" / "pdf"
-DEFAULT_DIR = ROOT / "extractions" / "fulltext_pilot"
+from paths import EXTRACT_BATCHES, EXTRACT_PILOT, INCLUDED, PDF_DIR, ROOT, WORK
+
+DEFAULT_DIR = EXTRACT_PILOT
 TABLES = ("cost_return", "adoption", "carbon")
 # The value columns whose numbers must appear in the quote, per table.
 VALUE_FIELDS = {
@@ -71,7 +95,7 @@ OUTCOMES = {
 PRACTICES = ("awd", "biochar", "rotational_grazing", "ca_bundle", "cover_crops",
              "nutrient_mgmt_b", "trees_in_farmlands", "fodder_banks", "feed_mgmt",
              "silvopasture", "dsr", "sri", "erw", "boundary_plantings", "improved_fallow",
-             "riparian_buffers", "multistrata_shade_trees", "crop_livestock_integration",
+             "riparian_buffers", "shaded_perennials", "crop_livestock_integration",
              "solar_irrigation", "water_harvesting", "improved_varieties")
 COST_ITEMS = ("seeds", "nutrient_inputs", "labour", "pest_control_inputs", "land_rent",
               "equipment_costs", "tax", "transport", "irrigation", "feed", "interest",
@@ -88,6 +112,40 @@ def practice_values() -> dict[str, set[str]]:
                 for r in csv.DictReader(f)}
     return {p: set(subs.get(p) or ["yes"]) | ({"unspecified"} if subs.get(p) else set())
             for p in PRACTICES}
+
+
+def in_scope_practices() -> set[str]:
+    with VOCAB.open(encoding="utf-8") as f:
+        return {r["practice_code"] for r in csv.DictReader(f) if r["scope"] == "in_scope"}
+
+
+def named_practices(row: dict) -> set[str]:
+    """The practice codes a row names: the practice columns it marks
+    (cost_return) and its practice field, without "other" and "none"."""
+    named = {p for p in PRACTICES if row.get(p)} | {str(row.get("practice") or "")}
+    return named - {"", "other", "none"}
+
+
+def out_of_scope(row: dict, in_scope: set[str]) -> bool:
+    """A row is out of scope when it names practices and none is in scope.
+    "other" and an empty practice are left for a person."""
+    named = named_practices(row)
+    return bool(named) and not named & in_scope
+
+
+def paper_out_of_scope(ex: dict, in_scope: set[str]) -> bool:
+    """A paper is out of scope when no row names an in-scope practice and
+    either every row is out of scope or the practices the agent confirmed are
+    all out of scope (then its rows coded "other" go too)."""
+    rows = [row for t in TABLES for row in ex.get(t) or [] if not row.get("dropped")]
+    if any(named_practices(row) & in_scope for row in rows):
+        return False
+    confirmed = set(ex.get("practices_confirmed") or []) - {"", "other", "none"}
+    if confirmed and not confirmed & in_scope:
+        return True
+    return bool(rows) and all(out_of_scope(row, in_scope) for row in rows)
+
+
 ALLOWED = {
     "data_type": {"field_measured", "survey_reported", "project_records", "modelled",
                   "secondary"},
@@ -98,19 +156,45 @@ ALLOWED = {
     "labour_valued": {"yes", "no", "unstated"},
     "costs_unknown": {"Yes", "No", ""},
     "error_type": {"", *ERROR_TYPES, *(f"Grouped {e}" for e in ERROR_TYPES)},
+    "feedstock": {"", "crop_residue", "manure", "forest_residue", "wood_unspecified", "other",
+                  "unstated"},
     "flag": {"", "paper_inconsistent", "table_image", "paper_inconsistent; table_image"},
 } | {c: {"Yes", "No", "NA", ""} for c in COST_ITEMS}
 # 2019 · 2019.1 · 2019..2020 · 2019.1..2019.2 · Y3 · Y1..Y20 · empty
 YEAR = re.compile(r"(\d{4}(\.\d)?(\.\.\d{4}(\.\d)?)?|Y\d+(\.\.Y\d+)?)?")
 # Column order of the cost_return sheet, as in the rules.
-COST_COLUMNS = ("outcome", "label_in_paper", "outcome_formula", "outcome_unit",
-                "is_incremental", "exchange_rate", "practice", *PRACTICES, "other_practices",
-                "comparator_matches_vocab", "product", "product_con", "treatment_name",
-                "control_name", "replicates", "animals_per_rep", "country", "site",
-                "value_trt", "value_con", "value_trt_error", "value_con_error", "error_type",
-                "measurement_year", "scenario", "discount_rate", "discount_period",
+# The column order of each data sheet: the paper, where and what, the
+# practices, the outcome with its values, the costs, where the value came
+# from, then the checks (CHECKS, last).
+FRONT = ("record_id", "title", "row")
+COST_COLUMNS = ("country", "site", "measurement_year", "product", "product_con",
+                "practice", *PRACTICES, "feedstock", "other_practices",
+                "comparator_matches_vocab",
+                "outcome", "label_in_paper", "outcome_formula", "outcome_unit",
+                "is_incremental", "treatment_name", "control_name", "value_trt",
+                "value_con", "value_trt_error", "value_con_error", "error_type",
+                "replicates", "animals_per_rep", "exchange_rate", "scenario",
+                "discount_rate", "discount_period",
                 "budget_type", "labour_valued", "costs_unknown", *COST_ITEMS, "other_costs",
                 "flag")
+TABLE_COLUMNS = {
+    "cost_return": COST_COLUMNS,
+    "adoption": ("country", "geography", "year", "practice", "kind", "measure",
+                 "definition_used", "ever_vs_current", "value", "denominator",
+                 "sample_size", "driver", "significant", "context"),
+    "carbon": ("country", "year", "practice", "project_name", "measure", "value", "unit",
+               "share_basis", "payment_form", "reporter"),
+}
+
+def titles(folder: Path) -> dict[str, str]:
+    """Each record's title, from the included records and the folder's
+    papers.csv or pilot_papers.csv."""
+    out = {}
+    for path in (INCLUDED, folder / "pilot_papers.csv", folder / "papers.csv"):
+        if path.exists():
+            with path.open(encoding="utf-8-sig", newline="") as f:
+                out |= {r["record_id"]: r.get("title") or "" for r in csv.DictReader(f)}
+    return out
 
 # Characters PDF text and copied quotes spell differently.
 SWAPS = {"­": "", "‐": "-", "‑": "-", "‒": "-", "–": "-",
@@ -269,9 +353,10 @@ def cell(value):
     return value
 
 
-def write_sheet(wb, name: str, rows: list[dict], first: tuple = ()):
+def write_sheet(wb, name: str, rows: list[dict], first: tuple = (), last: tuple = ()):
     ws = wb.create_sheet(name)
-    cols = list(first) + sorted({k for r in rows for k in r} - set(first))
+    cols = (list(first) + sorted({k for r in rows for k in r} - set(first) - set(last))
+            + list(last))
     ws.append(cols)
     for c in ws[1]:
         c.font = Font(bold=True)
@@ -281,26 +366,88 @@ def write_sheet(wb, name: str, rows: list[dict], first: tuple = ()):
     return ws, cols
 
 
+QC_FIELDS = ("record_id", "title", "kind", "table", "row", "field", "extracted", "should_be",
+             "person_decision", "page", "why", "row_quote")
+
+
+def read_qc(path: Path, ex: dict, out: list, skip: set = frozenset(),
+            title: str = "") -> dict:
+    """Add a second reader's findings on one paper to out; its verdict.
+    Findings on rows in skip ((table, 1-based row), the out-of-scope and
+    dropped rows) are left off."""
+    if not path.exists():
+        return {"qc_verdict": "", "qc_decision_ok": "", "qc_summary": ""}
+    q = json.loads(path.read_text(encoding="utf-8"))
+    rid = ex["record_id"]
+    start = len(out)
+    if q.get("decision_ok") is False:
+        out.append({"record_id": rid, "kind": "decision", "field": "decision",
+                    "extracted": ex.get("decision"), "why": q.get("decision_note")})
+    for i in q.get("issues") or []:
+        rows = ex.get(i.get("table")) or []
+        n = i.get("row")
+        if isinstance(n, int) and (i.get("table"), n + 1) in skip:
+            continue
+        quote = rows[n].get("quote") if isinstance(n, int) and 0 <= n < len(rows) else None
+        # The second reader counts rows from 0; the sheets count from 1.
+        out.append({"record_id": rid, "kind": i.get("severity"), "table": i.get("table"),
+                    "row": n + 1 if isinstance(n, int) else n, "field": i.get("field"),
+                    "extracted": i.get("extracted"), "should_be": i.get("should_be"),
+                    "page": i.get("page"), "why": i.get("why"), "row_quote": quote})
+    for m in q.get("missed") or []:
+        out.append({"record_id": rid, "kind": "missed", "table": m.get("table"),
+                    "page": m.get("page"), "field": m.get("locator"), "why": m.get("what")})
+    for finding in out[start:]:
+        finding["title"] = title
+    return {"qc_verdict": q.get("verdict"), "qc_decision_ok": q.get("decision_ok"),
+            "qc_summary": q.get("summary")}
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--dir", type=Path, default=DEFAULT_DIR)
+    ap.add_argument("--dir", type=Path, default=DEFAULT_DIR,
+                    help="a round's folder; a relative path is looked for in the shared "
+                         "folder, then the repo")
+    ap.add_argument("--batch", type=int, help="check batch N in the shared folder, "
+                                              "written to batch_NNN.xlsx")
     ap.add_argument("--record", help="check one paper only and print its problems")
     ap.add_argument("--out", help="workbook name in --dir (default checked.xlsx), e.g. when "
                                   "checked.xlsx is open in Excel")
     args = ap.parse_args()
+    if args.batch:
+        args.dir = EXTRACT_BATCHES / f"batch_{args.batch:03d}"
+        args.out = args.out or f"batch_{args.batch:03d}.xlsx"
+    elif not args.dir.is_absolute():
+        args.dir = next((base / args.dir for base in (WORK, ROOT)
+                         if (base / args.dir).is_dir()), ROOT / args.dir)
 
-    papers, clean, problems, by_eye = [], {t: [] for t in TABLES}, [], []
+    papers, clean, problems, by_eye, qc = [], {t: [] for t in TABLES}, [], [], []
+    scoped_out = {t: [] for t in TABLES}
+    dropped = []
+    in_scope = in_scope_practices()
+    title_of = titles(args.dir)
     paths = sorted(args.dir.glob(f"{args.record or '*'}.json"))
     for path in paths:
         ex = json.loads(path.read_text(encoding="utf-8"))
         rid = ex["record_id"]
+        title = title_of.get(rid, "")
         pdf = Pdf(PDF_DIR / f"{rid}.pdf")
         counts = {}
+        paper_out = paper_out_of_scope(ex, in_scope)
+        skip = set()
         for table in TABLES:
             rows = ex.get(table) or []
-            counts[table] = len(rows)
+            counts[table] = sum(not r.get("dropped") for r in rows)
             for i, row in enumerate(rows, 1):
-                row = {"record_id": rid, "row": i, **row}
+                row = {"record_id": rid, "title": title, "row": i, **row}
+                if row.get("dropped"):
+                    dropped.append({"table": table, **row})
+                    skip.add((table, i))
+                    continue
+                if paper_out or out_of_scope(row, in_scope):
+                    skip.add((table, i))
+                    scoped_out[table].append(row)
+                    continue
                 row["check_quote"] = pdf.find_quote(row.get("quote") or "",
                                                     int(row.get("page") or 0))
                 row["check_numbers"] = check_numbers(row, table)
@@ -316,8 +463,9 @@ def main():
                 if row.get("extraction_method") in BY_EYE:
                     by_eye.append({"table": table, "person_value": None,
                                    "person_ok": None, **row})
-        papers.append({k: ex.get(k) for k in PAPER_FIELDS} |
-                      {f"n_{t}": counts[t] for t in TABLES})
+        review = read_qc(args.dir / "qc" / f"{rid}.json", ex, qc, skip, title)
+        papers.append({"title": title} | {k: ex.get(k) for k in PAPER_FIELDS} |
+                      {f"n_{t}": counts[t] for t in TABLES} | review)
 
     if args.record:
         for p in problems:
@@ -329,23 +477,37 @@ def main():
 
     wb = openpyxl.Workbook()
     wb.remove(wb.active)
-    write_sheet(wb, "papers", papers, PAPER_FIELDS)
+    write_sheet(wb, "papers", papers, ("record_id", "title", *PAPER_FIELDS[1:]))
     for table in TABLES:
-        first = ("record_id", "row", *CHECKS, *PROVENANCE)
-        if table == "cost_return":
-            first += COST_COLUMNS
-        write_sheet(wb, table, clean[table], first)
+        write_sheet(wb, table, clean[table], (*FRONT, *TABLE_COLUMNS[table], *PROVENANCE),
+                    CHECKS)
     ws, cols = write_sheet(wb, "to_check", by_eye,
-                           ("record_id", "table", "row", "person_value", "person_ok",
-                            "page", "locator", "quote"))
+                           ("record_id", "title", "table", "row", "person_value",
+                            "person_ok", "page", "locator", "quote"), CHECKS)
     yellow = PatternFill("solid", fgColor="FFF2CC")
     for c in ("person_value", "person_ok"):
         for r in range(1, len(by_eye) + 2):
             ws.cell(r, cols.index(c) + 1).fill = yellow
-    write_sheet(wb, "problems", problems, ("record_id", "table", "row", *CHECKS,
+    ws, cols = write_sheet(wb, "qc", qc, QC_FIELDS)
+    for r in range(1, len(qc) + 2):
+        ws.cell(r, cols.index("person_decision") + 1).fill = yellow
+    write_sheet(wb, "problems", problems, ("record_id", "title", "table", "row", *CHECKS,
                                            *PROVENANCE))
+    if dropped:
+        write_sheet(wb, "dropped", dropped,
+                    ("record_id", "title", "table", "row", "dropped", "outcome", "measure",
+                     "treatment_name", "control_name", "value_trt", "value_con", "value",
+                     "page", "quote"))
     out = args.dir / (args.out or "checked.xlsx")
     wb.save(out)
+    n_out = sum(len(v) for v in scoped_out.values())
+    if n_out:
+        wb = openpyxl.Workbook()
+        wb.remove(wb.active)
+        for table in TABLES:
+            write_sheet(wb, table, scoped_out[table],
+                        (*FRONT, *TABLE_COLUMNS[table], *PROVENANCE))
+        wb.save(out.with_name(f"{out.stem}_out_of_scope.xlsx"))
 
     n_rows = sum(len(v) for v in clean.values())
     n_bad = sum(1 for p in problems if p["check_quote"] == "not_found")
@@ -357,6 +519,14 @@ def main():
           f"{n_num} with a number not in its quote or of the other sign; "
           f"{n_cell} table values not first in their cell; {n_field} with a column value "
           f"the rules do not allow; {len(by_eye)} figure or picture-table values to check")
+    if n_out:
+        print(f"{n_out} rows out of scope -> {out.stem}_out_of_scope.xlsx")
+    if dropped:
+        print(f"{len(dropped)} rows dropped at a person's check -> sheet dropped")
+    print(f"second reader: {sum(1 for p in papers if p['qc_verdict'])} papers checked, "
+          f"{sum(q['kind'] == 'error' for q in qc)} errors, "
+          f"{sum(q['kind'] == 'query' for q in qc)} queries, "
+          f"{sum(q['kind'] == 'missed' for q in qc)} missed")
     print(f"wrote {out}")
 
 

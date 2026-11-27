@@ -20,27 +20,30 @@
 #        --limit=    upload at most this many records, for a test run
 #        --pdfs-only only upload the PDFs of records already in Zotero (after
 #                    a new fetch)
+#        --retag     rewrite the "practice: " tags of items already in Zotero
+#                    from the current included_records.csv and vocabulary
+#                    (after a rename or scope change); with --dry it reads
+#                    and reports only
 # Needs in .Renviron: ZOTERO_API_KEY (with write access to the group) and
 #   ZOTERO_GROUP_ID (the number in the group's URL on zotero.org).
 #
 # Run with:
 #   Rscript R/04_fetch/zotero_upload.R --dry
 #   Rscript R/04_fetch/zotero_upload.R --limit=20
+#   Rscript R/04_fetch/zotero_upload.R --retag --dry
 #   Rscript R/04_fetch/zotero_upload.R
 
 root <- rprojroot::find_root(rprojroot::has_file("CC4A.Rproj"))
 source(file.path(root, "R/00_shared/paths.R"))
 source(file.path(root, "R/00_shared/utils.R"))
+source(file.path(root, "R/00_shared/zotero.R"))
 readRenviron(file.path(root, ".Renviron"))
 
-ZOTERO_BASE <- "https://api.zotero.org"
 # Each practice is a tag, "practice: Biochar"; click tags in Zotero's tag
 # selector to filter, two tags to see the papers with both.
 PRACTICE_TAG <- "practice: "
 NO_PRACTICE_LABEL <- "No defined practice"
 NO_PDF_TAG <- "cc4a_no_pdf_yet"
-# The API takes at most 50 objects per write.
-WRITE_BATCH <- 50
 # OpenAlex work types to Zotero item types; anything else is a "document".
 ITEM_TYPES <- c(article = "journalArticle", review = "journalArticle",
                 `book-chapter` = "bookSection", book = "book", dissertation = "thesis",
@@ -59,69 +62,7 @@ group <- Sys.getenv("ZOTERO_GROUP_ID")
 if (!dry && (!nzchar(key) || !nzchar(group))) {
   stop("Set ZOTERO_API_KEY and ZOTERO_GROUP_ID in .Renviron.", call. = FALSE)
 }
-prefix <- paste0(ZOTERO_BASE, "/groups/", group)
-
-#' A request to the group library. Waits when the server asks it to back off.
-#' @param headers further headers, such as the version a PATCH expects
-#' @param ... query parameters
-zotero <- function(path, method = "GET", body = NULL, headers = list(), ...) {
-  req <- polite_request(paste0(prefix, path), ...) |>
-    httr2::req_headers(`Zotero-API-Key` = key, `Zotero-API-Version` = "3", !!!headers) |>
-    httr2::req_method(method) |>
-    httr2::req_timeout(120)
-  if (!is.null(body)) req <- httr2::req_body_json(req, body, auto_unbox = TRUE, null = "null")
-  resp <- httr2::req_perform(req)
-  wait <- suppressWarnings(as.numeric(httr2::resp_header(resp, "Backoff", NA)))
-  if (!is.na(wait)) Sys.sleep(wait)
-  if (httr2::resp_status(resp) >= 400) {
-    stop("Zotero ", method, " ", path, ": HTTP ", httr2::resp_status(resp), " ",
-         httr2::resp_body_string(resp), call. = FALSE)
-  }
-  resp
-}
-
-#' Write objects in batches of 50; the keys created, in input order (NA where
-#' Zotero refused one, with the reason logged).
-zotero_write <- function(path, objects) {
-  keys <- rep(NA_character_, length(objects))
-  for (b in split(seq_along(objects), ceiling(seq_along(objects) / WRITE_BATCH))) {
-    res <- httr2::resp_body_json(zotero(path, "POST", unname(objects[b])))
-    for (i in names(res$successful)) keys[b[as.integer(i) + 1]] <- res$successful[[i]]$key
-    for (i in names(res$failed)) log_msg("refused: ", res$failed[[i]]$message, level = "warn")
-  }
-  keys
-}
-
-#' Every collection in the group, as name, key and parent key.
-list_collections <- function() {
-  out <- list()
-  start <- 0
-  repeat {
-    page <- httr2::resp_body_json(zotero("/collections", limit = 100, start = start))
-    if (!length(page)) break
-    out <- c(out, page)
-    start <- start + 100
-  }
-  data.frame(name = vapply(out, function(x) x$data$name, ""),
-             key = vapply(out, function(x) x$key, ""),
-             parent = vapply(out, function(x) {
-               p <- x$data$parentCollection
-               if (isFALSE(p) || is.null(p)) "" else p
-             }, ""))
-}
-
-#' The key of each folder named under a parent, made where missing.
-ensure_folders <- function(names, parent, existing) {
-  have <- existing[existing$parent == parent, ]
-  missing <- setdiff(names, have$name)
-  if (length(missing)) {
-    new <- zotero_write("/collections", lapply(missing, function(n) {
-      list(name = n, parentCollection = if (parent == "") FALSE else parent)
-    }))
-    have <- rbind(have, data.frame(name = missing, key = new, parent = parent))
-  }
-  setNames(have$key[match(names, have$name)], names)
-}
+prefix <- zotero_prefix()
 
 templates <- list()
 #' The empty item of a type, from the API, so only valid fields are sent.
@@ -210,6 +151,45 @@ practice_tag <- setNames(paste0(PRACTICE_TAG, vocab$label,
                                 dplyr::coalesce(scope_note[vocab$scope], "")),
                          vocab$practice_code)
 practice_tag <- c(practice_tag, none = paste0(PRACTICE_TAG, NO_PRACTICE_LABEL))
+
+# --retag: bring the "practice: " tags of the items already in Zotero in line
+# with included_records.csv and the vocabulary (after a practice is renamed or
+# its scope changes). Other tags are kept; only items whose practice tags
+# differ are written, 50 to a request.
+if (isTRUE(flag(flags, "retag", FALSE))) {
+  done <- read_csv_safe(FILE_ZOTERO_ITEMS)
+  done <- done[done$record_id %in% records$record_id, ]
+  want <- setNames(lapply(strsplit(records$practices, "; "), function(p)
+    sort(unique(unname(practice_tag[p][!is.na(practice_tag[p])])))), records$record_id)
+  changes <- list()
+  for (b in split(seq_len(nrow(done)), ceiling(seq_len(nrow(done)) / WRITE_BATCH))) {
+    got <- httr2::resp_body_json(zotero("/items", itemKey = paste(done$item_key[b],
+                                                                  collapse = ",")))
+    for (it in got) {
+      rid <- done$record_id[done$item_key == it$key][1]
+      tags <- vapply(it$data$tags, `[[`, "", "tag")
+      old <- sort(tags[startsWith(tags, PRACTICE_TAG)])
+      if (identical(old, want[[rid]])) next
+      keep <- Filter(function(t) !startsWith(t$tag, PRACTICE_TAG), it$data$tags)
+      changes[[length(changes) + 1]] <- list(
+        key = it$key, version = it$version,
+        tags = c(keep, lapply(want[[rid]], function(t) list(tag = t))),
+        from = paste(old, collapse = " | "), to = paste(want[[rid]], collapse = " | "))
+    }
+    log_msg(sprintf("%d/%d items read", max(b), nrow(done)))
+  }
+  log_msg(length(changes), " of ", nrow(done), " items have practice tags to change")
+  if (length(changes)) {
+    shift <- table(paste(vapply(changes, `[[`, "", "from"), "->",
+                         vapply(changes, `[[`, "", "to")))
+    print(utils::head(sort(shift, decreasing = TRUE), 15))
+  }
+  if (!dry && length(changes)) {
+    keys <- zotero_write("/items", lapply(changes, `[`, c("key", "version", "tags")))
+    log_msg(sum(!is.na(keys)), " items retagged", level = "done")
+  }
+  quit(save = "no")
+}
 
 if (dry) {
   log_msg(nrow(records), " records, ", sum(has_pdf), " with a PDF to upload")

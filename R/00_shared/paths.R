@@ -1,7 +1,8 @@
 # What it does: Holds the project's folder layout in one place. Every other
 #   script sources this file and then refers to the objects it defines, so no
 #   path is ever written twice. Also creates the output folders on first use.
-# Reads: nothing. Environment variable CC4A_OUT_DIR if it is set.
+# Reads: nothing. Environment variables CC4A_SHARED_DIR and CC4A_OUT_DIR if
+#   they are set (in .Renviron).
 # Writes: creates the outputs/ folders if they do not exist.
 # Flags: none. This file is sourced, not run.
 #
@@ -31,13 +32,26 @@ DIR_DATA <- if (nzchar(Sys.getenv("CC4A_DATA_DIR"))) {
   file.path(CC4A_ROOT, "data")
 }
 
-# Everything the pipeline produces. Git ignored and safe to delete, because
-# the scripts regenerate it. Redirect it with CC4A_OUT_DIR if you want runs
-# on a shared drive.
+# The team's shared folder for everything not in git: run output, the PDFs
+# and the extraction batches. It is the "Cost, Adoption & Credit systematic
+# review" folder in the project's OneDrive (Technical Development), synced to
+# each person's computer; each person sets its local path as CC4A_SHARED_DIR
+# in .Renviron (py/paths.py reads the same setting). Unset, everything stays
+# inside the clone, as before.
+CC4A_SHARED <- Sys.getenv("CC4A_SHARED_DIR")
+if (nzchar(CC4A_SHARED) && !dir.exists(CC4A_SHARED)) {
+  stop("CC4A_SHARED_DIR is set in .Renviron but the folder is not there: ",
+       CC4A_SHARED, ". Is OneDrive syncing it?")
+}
+DIR_WORK <- if (nzchar(CC4A_SHARED)) CC4A_SHARED else CC4A_ROOT
+
+# Everything the pipeline produces: search, screening, PDFs, logs. In the
+# shared folder when CC4A_SHARED_DIR is set; git ignored either way.
+# CC4A_OUT_DIR, if set, overrides it.
 DIR_OUTPUTS <- if (nzchar(Sys.getenv("CC4A_OUT_DIR"))) {
   Sys.getenv("CC4A_OUT_DIR")
 } else {
-  file.path(CC4A_ROOT, "outputs")
+  file.path(DIR_WORK, "outputs")
 }
 
 # ---- output folders, one per step --------------------------------------
@@ -114,6 +128,17 @@ DIR_EXTRACT_PILOT  <- file.path(CC4A_ROOT, "extractions", "fulltext_pilot")
 DIR_EXTRACT_V02    <- file.path(CC4A_ROOT, "extractions", "fulltext_v02")
 FILE_PILOT_PAPERS  <- file.path(DIR_EXTRACT_PILOT, "pilot_papers.csv")
 FILE_COMPARE_WB2022 <- file.path(DIR_EXTRACT_V02, "compare_wb2022.csv")
+# The extraction batches (py/batch.py): one folder and workbook per batch,
+# and one status row per paper, read by R/04_fetch/zotero_status.R. In the
+# shared folder when CC4A_SHARED_DIR is set, not in git.
+DIR_EXTRACT_BATCHES <- file.path(DIR_WORK, "extractions", "fulltext")
+FILE_EXTRACT_STATUS <- file.path(DIR_EXTRACT_BATCHES, "status.csv")
+# Included records whose tagged practices are all out of scope: not extracted,
+# moved to "2. Rejected" in Zotero (py/batch.py scope).
+FILE_SCOPE_EXCLUDED <- file.path(DIR_EXTRACT_BATCHES, "scope_excluded.csv")
+# Records screened again when shaded perennials came into scope (24 Nov 2026),
+# for R/03_screen/screen_scope.R --rescreen=.
+FILE_RESCREEN_SHADED <- file.path(DIR_SCREEN, "rescreen_shaded_perennials.csv")
 FILE_EXTRACT_RAW   <- file.path(DIR_EXTRACT, "extracted_verbatim.csv")
 FILE_EXTRACT_AUDIT <- file.path(DIR_EXTRACT, "verification_report.csv")
 
@@ -129,6 +154,9 @@ FILE_COST_REPORT   <- file.path(DIR_PUBLISH, "cost_report.csv")
 # Controlled vocabularies and the keyword list
 FILE_VOCAB_PRACTICES <- file.path(DIR_CATALOGUES, "vocab_practices.csv")
 FILE_VOCAB_UNITS     <- file.path(DIR_CATALOGUES, "vocab_units.csv")
+# Each practice code's row in the practice register (TNC and Alliance, v0.2),
+# checked by py/check_register.py.
+FILE_CROSSWALK_REGISTER <- file.path(DIR_CATALOGUES, "crosswalk_register.csv")
 FILE_KEYWORDS        <- file.path(DIR_CATALOGUES, "keyword_list.R")
 
 # The OpenAlex search terms: one row per practice, outcome or geography block,

@@ -15,13 +15,12 @@ Run with:
 import csv
 import random
 import re
-from pathlib import Path
 
 import pymupdf as fitz
 
-ROOT = Path(__file__).resolve().parents[1]
-FULLTEXT = ROOT / "outputs" / "04_fulltext"
-OUT = ROOT / "extractions" / "fulltext_pilot" / "pilot_papers.csv"
+from paths import EXTRACT_PILOT, FULLTEXT
+
+OUT = EXTRACT_PILOT / "pilot_papers.csv"
 SEED = 20261116
 # Papers per outcome folder. Carbon finance has only five PDFs.
 PER_FOLDER = {"Adoption": 8, "Costs, returns and incentives": 9, "Multiple outcomes": 9,
