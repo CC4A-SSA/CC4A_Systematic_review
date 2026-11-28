@@ -1,6 +1,6 @@
 # Full text screening and extraction rules
 
-Version **0.2.0**, 2026-11-17. Every extracted file records the version it
+Version **0.3.1**, 2026-11-27. Every extracted file records the version it
 was made under (`rules_version`). A change to these rules is a new version,
 listed at the end, so any extraction can be traced to the rules it used.
 
@@ -28,6 +28,10 @@ first criterion it fails, and extract nothing.
 | It studies one of the defined practices as an intervention, as defined in the vocabulary, not one it only mentions | `no_defined_practice` |
 | It reports at least one value for an outcome below: costs or returns, adoption, or carbon income | `no_outcome_data` |
 | The values are its own (field, survey, project or model results), not only figures quoted from other studies | `only_secondary` |
+
+A paper whose only defined practices are `not_taken_forward` or `out_of_scope`
+in the vocabulary (for example only `nutrient_mgmt_b`, dropped in practice
+register v0.2) is `exclude`, reason `practice_out_of_scope`.
 
 A review or meta-analysis is `exclude`, reason `review`, unless it reports
 its own pooled numbers for Africa; then it stays in and those numbers are
@@ -69,7 +73,8 @@ the paper does not compare.
 | Column | What |
 |---|---|
 | `practice` | Vocabulary code of the practice the row is about |
-| practice columns (`awd`, `biochar`, `rotational_grazing`, `ca_bundle`, `cover_crops`, `nutrient_mgmt_b`, `trees_in_farmlands`, `fodder_banks`, `feed_mgmt`, `silvopasture`, `dsr`, `sri`, `erw`, `boundary_plantings`, `improved_fallow`, `riparian_buffers`, `multistrata_shade_trees`, `crop_livestock_integration`, `solar_irrigation`, `water_harvesting`, `improved_varieties`) | For each vocabulary practice the treatment has **and its control does not**: its sub-practice, from the `subpractices` column of `catalogues/vocab_practices.csv` (`nutrient_mgmt_b = isfm`, `ca_bundle = no_till_residue`), several joined by `; `; `unspecified` when the paper does not say which; `yes` for a practice with no sub-practices. Otherwise empty. A practice in both arms is not part of the contrast and is not marked. Biochar: `with_fertiliser` whenever the treatment's biochar goes on with fertiliser (whether the control gets that fertiliser shows in `other_practices`); `blend` for biochar-compost and biochar-based fertilisers |
+| practice columns (`awd`, `biochar`, `rotational_grazing`, `ca_bundle`, `cover_crops`, `nutrient_mgmt_b`, `trees_in_farmlands`, `fodder_banks`, `feed_mgmt`, `silvopasture`, `dsr`, `sri`, `erw`, `boundary_plantings`, `improved_fallow`, `riparian_buffers`, `shaded_perennials`, `crop_livestock_integration`, `solar_irrigation`, `water_harvesting`, `improved_varieties`) | For each vocabulary practice the treatment has **and its control does not**: its sub-practice, from the `subpractices` column of `catalogues/vocab_practices.csv` (`nutrient_mgmt_b = isfm`, `ca_bundle = no_till_residue`), several joined by `; `; `unspecified` when the paper does not say which; `yes` for a practice with no sub-practices. Otherwise empty. A practice in both arms is not part of the contrast and is not marked. Biochar: `with_fertiliser` whenever the treatment's biochar goes on with fertiliser (whether the control gets that fertiliser shows in `other_practices`); `blend` for biochar-compost and biochar-based fertilisers. Feed management (register G1.1): `supplementation` only when the supplement is grown on the farm (fodder legumes, fodder trees); bought-in concentrates as the main lever are `supplementation_bought_in` (extracted, not pooled). Shaded perennials: the crop under the shade trees, `coffee`, `cocoa` or `tea` |
+| `feedstock` | Biochar rows only: what the char was made from, one of `crop_residue`, `manure`, `forest_residue` (wood or sawdust from forest or woodland), `wood_unspecified`, `other`, `unstated`. Practice register C2.3 excludes forest-residue feedstock: those rows are still extracted, and `forest_residue` is the flag. Empty for other rows |
 | `other_practices` | Anything else the treatment has and the control does not (mineral fertiliser, compost, irrigation, a variety not in the vocabulary), named as in the paper, always, even when it is part of an integrated package such as ISFM (compost + NPK against no fertiliser lists the NPK here). Not listed: inputs that are part of how the practice itself works (herbicide replacing tillage in no-till); their cost goes in the cost columns, as in 2022. More than one entry across the practice columns and `other_practices` means the row is a bundle |
 | `comparator_matches_vocab` | `yes` when the control is the vocabulary's comparator for `practice` (`catalogues/vocab_practices.csv`, column `comparator`), `no` when it is not (a no-fertiliser control for `nutrient_mgmt_b`), `unclear` |
 | `product`, `product_con` | Crop or animal product of the treatment and of the control (sole maize against a maize-bean intercrop) |
@@ -131,6 +136,46 @@ A treatment the paper marks dominated ("D") gets no value and `dominated` in
 `note`; a rate printed for the control itself is skipped. Ranges ("NPV from −17,940 to 0") are not extracted, as in 2022;
 mention them in the paper's `notes`.
 
+**Settled at the check of batches 1 and 2 (Namita, 27 Nov 2026)**
+
+- *Animal fattening.* A fattening paper's "gross return" is the selling
+  price minus the purchase price of the animal (the value of the weight
+  gained). Code it `Gross Return` and write that in `outcome_formula`; when
+  the paper does not say whether the purchase price is netted out, write
+  `unstated` and what the paper does say. A selling price alone is
+  `Other (named)`.
+- *Before and after changes.* A change in the same arm from before to after
+  the treatment (milk value before and after supplementation) is
+  `Other (named)`, with the formula; it is neither a `Gross Return` nor
+  `is_incremental` (that is a difference from the control).
+- *Valued but not paid.* Values that are not cash to the farmer, such as
+  nitrogen in a cover crop priced as urea (fertiliser replacement value) or
+  an environmental benefit valued by willingness to pay, are extracted as
+  `Other (named)`, with the formula, so they are never pooled with returns.
+- *Discounted cash flows.* When a paper prints a yearly cash flow both
+  undiscounted and discounted, take the undiscounted years and the totals
+  (NPV, IRR, payback); not the discounted years, which are the same numbers
+  times a discount factor.
+- *Bought-in feed.* A commercial compounded concentrate is
+  `supplementation_bought_in`, also when the control is a homemade
+  concentrate.
+- *A paper whose only money value is not a cost or return of the practice*
+  (the replacement cost of nutrients lost to erosion) is `no_outcome_data`.
+- *A harvested legume grown in a crop* (vetch under-sown in sorghum and cut
+  for hay) is neither `cover_crops` nor `feed_mgmt`: `no_defined_practice`.
+- *Carbon values built from borrowed sequestration rates times an assumed
+  price*, with no with/without comparison of returns, are not the paper's own
+  outcome data: `no_outcome_data`.
+- *Unitless indices.* A ratio such as an acceptability index (treatment
+  benefit over control benefit) has the unit `ratio`, never a currency.
+- *Typeset tables.* A table whose numbers are in the PDF's text layer is
+  `table`, even in a scanned-looking thesis; `table_image` only when the
+  numbers are not in the text.
+- *Biochar production only.* A paper on making biochar (a kiln) that never
+  applies it to a field is `no_defined_practice`.
+- *Crop residue treatment* (urea-treated straw) stays in `feed_mgmt`
+  (`residue_treatment`) until the practice register decides on it.
+
 ### adoption
 
 One row per adoption figure or adoption driver.
@@ -173,6 +218,7 @@ One row per carbon income figure.
 | `locator` | Enough to find it without searching: `Table 3, row "Biochar 10 t/ha", column "2019 LR"`; `Figure 2, bar "CA", 2018`; `Results, paragraph 2` |
 | `quote` | The exact words, copied from the page, never retyped or tidied. For a table: the row label, the column header and the cell, as they print, separated by ` | `. For a figure or a `table_image`: the caption, and for a figure the axis label |
 | `note` | Judgement calls: unit assumptions, number readings, text against table conflicts, arm naming, season names |
+| `dropped` | Never set by the agent. Set only at a person's check: the reason a row is dropped (a decision against it, or its paper excluded). The row stays in the file as a record; the checker lists it on the `dropped` sheet and leaves it out of the data sheets and the counts |
 
 Rules the checks enforce:
 
@@ -194,7 +240,7 @@ paper pilot is `fulltext_pilot`, under 0.1.0):
 ```json
 {
   "record_id": "W123",
-  "rules_version": "0.2.0",
+  "rules_version": "0.3.1",
   "decision": "include",
   "exclude_reason": null,
   "practices_confirmed": ["biochar"],
@@ -249,3 +295,5 @@ their labour) is a `Gross Margin` with `budget_type = partial`; it is a
 |---|---|---|
 | 0.1.0 | 2026-11-16 | First version, for the 30 paper pilot |
 | 0.2.0 | 2026-11-17 | cost_return rewritten from Namita's answers to the 44 gaps: 2022 practice and cost-item columns (practices from our vocabulary), `product_con`, `animals_per_rep`, `label_in_paper`, `outcome_formula`, `is_incremental`, `comparator_matches_vocab`, `scenario`, `exchange_rate`, `budget_type`, `labour_valued`, `input_production`, `feed`, `interest`, `flag`; practice columns hold the sub-practice (vocabulary `subpractices` column); paper field `supplementary`; season and aggregate year codes; no calculated values; table > figure > text; method `table_image`; outcomes Value Cost Ratio, Labour Use, Other (named) |
+| 0.3.0 | 2026-11-24 | Practice register v0.2 (issue #23): `nutrient_mgmt_b` not taken forward, exclude reason `practice_out_of_scope`; `multistrata_shade_trees` renamed `shaded_perennials` and in scope (sub-practices coffee, cocoa, tea); `feed_mgmt` sub-practice `supplementation_bought_in`; biochar `feedstock` column |
+| 0.3.1 | 2026-11-27 | Namita's answers at the check of batches 1 and 2 (section 3, after cost_return): fattening gross return, before/after changes, values not paid in cash, discounted cash flows, bought-in concentrate, unitless indices, typeset tables, and four exclusion cases; crop residue treatment stays in `feed_mgmt`; the `dropped` field, set only at a person's check |

@@ -125,14 +125,31 @@ carries no papers, no run output and no credentials.
 |---|---|
 | `R/`, every script | Downloaded full texts, which land in `outputs/04_fulltext/pdf/` |
 | `catalogues/`, the vocabularies, keyword list, gold set and decision cache | Everything under `outputs/`, git ignored and rebuilt by the scripts |
+| `extractions/fulltext_pilot/` and `fulltext_v02/`, the pilot and the five 2022 papers | `extractions/fulltext/`, the extraction batches, their workbooks and `status.csv` |
 | `docs/protocol.md` and `docs/synthesis/`, the review protocol | `catalogues/search_raw.csv`, the raw result set, rebuilt by step 1 |
 | `CLAUDE.md` and `.claude/`, notes for AI coding sessions | API keys, which live in `.Renviron` and are git ignored |
 
-Layout is settled in one file, `R/00_shared/paths.R`. Scripts locate the
-repository root from their own position using `rprojroot`, so the clone can
-sit anywhere and no script has to change directory to work. Point
-`CC4A_OUT_DIR` at a shared drive in `.Renviron` if run output should not live
-inside the clone.
+Layout is settled in one file, `R/00_shared/paths.R` (and `py/paths.py` for
+the Python scripts). Scripts locate the repository root from their own
+position using `rprojroot`, so the clone can sit anywhere and no script has
+to change directory to work.
+
+**The files that are not in git live in the team's shared folder**, "Cost,
+Adoption & Credit systematic review" under Technical Development in the
+project's OneDrive (Alliance - AgLED - Gates Carbon Credits for Adaptation):
+`outputs/` (search, screening, the PDFs, logs) and `extractions/fulltext/`
+(the batches). Sync that folder to your computer, then give its local path in
+`.Renviron`:
+
+```
+CC4A_SHARED_DIR="C:/Users/<you>/OneDrive - CGIAR/.../Technical Development/Cost, Adoption & Credit systematic review"
+```
+
+R and Python both read it; restart R after setting it. Unset, the scripts use
+`outputs/` and `extractions/fulltext/` inside the clone. `CC4A_OUT_DIR`, if
+set, still overrides where `outputs/` goes. Two people should not run the same
+batch at once: OneDrive keeps both copies of a file written twice, it does not
+merge them.
 
 ## 4. A tour of the scripts
 
@@ -163,7 +180,7 @@ inside the clone.
 
 | Script | What it is |
 |---|---|
-| `screen_scope.R` | The abstract level decision. Returns a verdict of in, out or unsure, a reason, the criterion that failed, the phrase evidencing a cost or adoption figure, the phrase naming the country, a guess at the practice, and a confidence. Picks up where it left off. `--limit=` for a trial, `--shard=k/n` to run in parallel, `--reask=` to revisit a named list, `--dry` to price it first. |
+| `screen_scope.R` | The abstract level decision. Returns a verdict of in, out or unsure, a reason, the criterion that failed, the phrase evidencing a cost or adoption figure, the phrase naming the country, a guess at the practice, and a confidence. Picks up where it left off. `--limit=` for a trial, `--shard=k/n` to run in parallel, `--reask=` to revisit a named list, `--dry` to price it first. `--rescreen=<csv>` screens a listed set of records again (as when shaded perennials came into scope), keeping their QC columns. |
 | `screen_rules.R` | The audit over those verdicts. Publication year and the Africa check are settled here from the record metadata rather than by the model, which is what makes the window cheap to move: two numbers in `paths.R` and a rerun, with no abstract read twice. A verdict of in whose quoted phrase contains no digit drops to unsure, as does anything the model marked low confidence, and a one word reason goes on the list to be asked again. Entries in `catalogues/screen_overrides.csv` override both the model and the rules. Writes the manual review queue. |
 | `tag_practices.R` | Puts every searched record under the defined practices of `catalogues/vocab_practices.csv` whose synonyms its title or abstract names, so counts follow the practices the review defines rather than the 15 broader search keyword groups the screening model saw. Rules only, no cost; capitalised synonyms (AWD, SRI) match case-sensitively, and hay, supplementation and shade trees count only next to a livestock term. Writes `outputs/03_screen/record_practices.csv`, read by the progress report. Rerun after a new search or a synonym change. |
 | `classify_practices.R` | The practice check. The included records that name no defined practice are checked again by a GPT model against each practice's definition and exclusions; code keeps those fitting an in scope practice and excludes the rest. Writes `outputs/03_screen/practice_check.csv`, which the progress report applies (a person's QC include stands). `--dry` prices it, `--limit=` for a test, `--max-usd=` caps the spend (default US$3), `--all-included` checks every included record. Picks up where it left off. |
@@ -174,7 +191,8 @@ inside the clone.
 |---|---|
 | `list_included.R` | Lists the included records (a person's QC decision overrides the model's; the practice check's exclusions are dropped) with their defined practices and one outcome folder each: Adoption, Costs, returns and incentives, Carbon finance, Multiple outcomes (two or more) or Outcome unclear, from what the screening model read in the abstract. Writes `outputs/04_fulltext/included_records.csv`. |
 | `fetch_fulltext.R` | Gets the free full texts of the included records: the open access locations Unpaywall reports for the DOI, the open access URL the search already carried, the DOI itself, then the PDF link the publisher's page declares. A download survives only if the magic bytes say PDF, `pdftools` can open it, it holds real text rather than scanned images, and it runs past a single page. Needs `UNPAYWALL_EMAIL`. `--retry` revisits failures, `--limit=` for a test, `--dry` counts. Picks up where it left off. |
-| `zotero_upload.R` | Puts the included records into the shared Zotero group (`ZOTERO_API_KEY`, `ZOTERO_GROUP_ID`) as one item each, in folders CC4A included full text / practice / outcome folder, and uploads the PDFs found. Items still without a PDF are tagged `cc4a_no_pdf_yet` for Zotero desktop's Find Available PDFs and then a person. Keeps `outputs/04_fulltext/zotero_items.csv`, so nothing is added twice. `--dry` prints the folders, `--limit=` for a test, `--pdfs-only` uploads new PDFs only. |
+| `zotero_upload.R` | Puts the included records into the shared Zotero group (`ZOTERO_API_KEY`, `ZOTERO_GROUP_ID`) as one item each, in folders CC4A included full text / practice / outcome folder, and uploads the PDFs found. Items still without a PDF are tagged `cc4a_no_pdf_yet` for Zotero desktop's Find Available PDFs and then a person. Keeps `outputs/04_fulltext/zotero_items.csv`, so nothing is added twice. `--dry` prints the folders, `--limit=` for a test, `--pdfs-only` uploads new PDFs only, `--retag` rewrites the `practice:` tags of items already uploaded after a practice is renamed or changes scope. |
+| `zotero_status.R` | Shows the full text status in Zotero: each outcome folder gets "1. Extracted" and "2. Rejected", and each paper moves into one as soon as it is extracted, tagged with its batch and, if rejected, the reason. Records never extracted because all their practices are out of scope (`scope_excluded.csv`) go to "2. Rejected" too. `--dry` sends nothing, `--all` resyncs after a decision changes. |
 
 ### R/05_extract
 
@@ -189,9 +207,12 @@ Full texts are extracted by Claude Code agents following `docs/synthesis/fulltex
 
 | Script | What it is |
 |---|---|
+| `paths.py` | Where the scripts find the files not in git: the shared folder named by `CC4A_SHARED_DIR` (from the environment or `.Renviron`), or the clone when it is unset. Imported by the other scripts. |
 | `select_pilot.py` | Chooses the pilot papers: papers with a PDF, spread over the outcome folders and the defined practices, seeded so the same run gives the same papers. Writes `extractions/fulltext_pilot/pilot_papers.csv`. |
 | `page_text.py` | Prints the text of PDF pages, so quotes are copied from the text layer, never retyped. |
-| `check_extraction.py` | Checks every extracted row: the quote is on its page, every number is in its quote, a table value is its cell's first number, and (rules 0.2 on) each cost and return column holds an allowed value. Gathers the round into one workbook with a problems sheet and a sheet of figure values for a person to check. `--out` names the workbook. |
+| `check_extraction.py` | Checks every extracted row: the quote is on its page, every number is in its quote, a table value is its cell's first number, and (rules 0.2 on) each cost and return column holds an allowed value. Gathers the round into one workbook with a problems sheet and a sheet of figure values for a person to check. `--out` names the workbook; `--batch N` checks batch N in the shared folder and writes `batch_NNN.xlsx`. Rows whose practices are all out of scope go to a second workbook, `<name>_out_of_scope.xlsx`. A second reader's findings (`qc/<id>.json`) go on a qc sheet. |
+| `batch.py` | Runs the extraction 30 papers at a time: `new` picks the next batch (Costs folder first) after checking the practice codes against the register, `update` logs a batch's results in `extractions/fulltext/status.csv`, `qc` marks a batch checked, `scope` lists the included records whose practices are all out of scope, `merge` stacks the checked batches' workbooks. |
+| `check_register.py` | Fails when the practice codes (`vocab_practices.csv`, `crosswalk_register.csv`) drift from the practice register: an in-scope code without a register ID, a scope that disagrees with the register, a newer register version, or an agreed register practice with no code. `--offline` skips the published register. |
 
 ### R/06_harmonise
 
@@ -230,7 +251,8 @@ the schema CSV and the Excel template) and the Chun addendum (`10`).
 
 ### outputs/
 
-Git ignored and disposable; the scripts rebuild it. One folder per step, plus
+Git ignored and disposable; the scripts rebuild it. In the shared folder when
+`CC4A_SHARED_DIR` is set. One folder per step, plus
 `review/` for the queues people work from and `logs/` for the record of what
 each run called and what it cost.
 

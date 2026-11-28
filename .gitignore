@@ -38,3 +38,6 @@ Thumbs.db
 # Python
 .venv/
 __pycache__/
+
+# Extraction batches: in the shared OneDrive folder (CC4A_SHARED_DIR)
+extractions/fulltext/

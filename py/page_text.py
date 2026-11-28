@@ -5,14 +5,14 @@ Run with:
   uv run python py/page_text.py W123 5        one page
   uv run python py/page_text.py W123 5-7      a range
   uv run python py/page_text.py W123 all      every page
+Reads: outputs/04_fulltext/pdf/<record_id>.pdf, in the shared folder when
+       CC4A_SHARED_DIR is set (py/paths.py)
 """
 
 import sys
-from pathlib import Path
-
 import pymupdf
 
-PDF_DIR = Path(__file__).resolve().parents[1] / "outputs" / "04_fulltext" / "pdf"
+from paths import PDF_DIR
 
 
 def main():

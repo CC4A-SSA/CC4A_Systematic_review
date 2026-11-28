@@ -49,18 +49,31 @@ KW_PRACTICE <- list(
     terms = c("cover crop*", "green manure", "relay crop*", "mucuna",
               "velvet bean", "lablab", "canavalia", "crotalaria")
   ),
+  # Not taken forward since practice register v0.2 (issue #23); kept so the
+  # strategy as first run stays on record.
   nutrient_mgmt_b = list(
     terms = c("integrated soil fertility", "ISFM", "micro-dosing",
               "microdosing", "deep placement", "fertilizer use efficiency",
               "fertiliser use efficiency", "site-specific nutrient", "4R")
   ),
   trees_in_farmlands = list(
-    # Screen out multistrata, boundary plantings and fallows at title and
-    # abstract; the string cannot exclude them.
+    # Screen out boundary plantings and fallows at title and abstract; the
+    # string cannot exclude them. Shade trees in coffee, cocoa and tea are
+    # shaded_perennials.
     terms = c("parkland*", "scattered trees", "on-farm trees",
               "trees on farm*", "Faidherbia", "Vitellaria", "shea",
               "alley crop*", "hedgerow intercrop*", "FMNR",
               "farmer managed natural regeneration", "agroforestry")
+  ),
+  # Added 24 Nov 2026 with practice register v0.2 C3.3 (issue #23).
+  shaded_perennials = list(
+    terms = c("shade coffee", "shaded coffee", "shade-grown coffee",
+              "coffee agroforestry", "coffee-based agroforestry", "coffee agroforest",
+              "coffee shade trees", "shade trees in coffee", "cocoa agroforestry",
+              "cacao agroforestry", "cocoa-based agroforestry", "cocoa agroforest",
+              "shaded cocoa", "shade cocoa", "cocoa shade trees", "shade trees in cocoa",
+              "shaded tea", "tea agroforestry", "shade trees in tea", "multistrata",
+              "multi-strata", "multistrata agroforestry")
   ),
   fodder_banks = list(
     terms = c("fodder bank*", "fodder tree*", "fodder shrub*", "Calliandra",

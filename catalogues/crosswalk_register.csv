@@ -1,0 +1,20 @@
+practice_code,subpractice,register_id,register_status,register_version,register_date,note
+awd,safe_moderate,C1.1,Agreed (scope open),v0.2,2026-11-02,Moderate AWD (multiple drainage) in irrigated rice with field-level water control
+awd,severe,,,v0.2,2026-11-02,Not in the register (C1.1 is moderate AWD only); extracted and kept apart from C1.1
+dsr,,C1.2,Agreed,v0.2,2026-11-02,Two review codes (dsr; sri) map to one register row
+sri,,C1.2,Agreed,v0.2,2026-11-02,Two review codes (dsr; sri) map to one register row
+nutrient_mgmt_b,,C1.3,Dropped,v0.2,2026-11-02,Dropped in register v0.2 (both sides; Oct 2026). Not taken forward; rows already extracted kept in separate workbooks
+cover_crops,,C2.1,Agreed (bundle rule proposed),v0.2,2026-11-02,
+ca_bundle,,C2.2,Agreed,v0.2,2026-11-02,Same definition: reduced tillage counts only with residue retained
+biochar,,C2.3,Agreed (method under review),v0.2,2026-11-02,Register excludes forest-residue feedstock; the review records feedstock and flags forest feedstock rather than excluding it
+trees_in_farmlands,parkland,C3.1,Agreed (carbon data open),v0.2,2026-11-02,Parklands incl. FMNR on cropland
+trees_in_farmlands,alley,C3.2,Agreed,v0.2,2026-11-02,Alley cropping
+shaded_perennials,,C3.3,Agreed (mapping open),v0.2,2026-11-02,Shade trees in coffee; cocoa and tea. Was multistrata_shade_trees (out of scope) until 24 Nov 2026
+boundary_plantings,,C3.4,Not taken forward,v0.2,2026-11-02,
+improved_fallow,,C3.5,Not taken forward (adaptation),v0.2,2026-11-02,
+riparian_buffers,,C3.6,Not taken forward (adaptation),v0.2,2026-11-02,
+fodder_banks,,G1.1,Agreed in principle,v0.2,2026-11-02,Dropped as a separate register row (C3.7) on 13 Oct; reserve-function forage counted under G1.1
+feed_mgmt,,G1.1,Agreed in principle,v0.2,2026-11-02,Register is narrower: on-farm forage; conserved feed; cut and carry. Bought-in concentrates as the main lever are partial_bundle (extracted; not pooled). residue_treatment open for a register decision
+rotational_grazing,,G1.2,Agreed (footprint open),v0.2,2026-11-02,
+silvopasture,,G2.1,Agreed,v0.2,2026-11-02,
+erw,,C4.1,Proposed (Alliance),v0.2,2026-11-02,
